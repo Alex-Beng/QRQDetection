@@ -37,25 +37,24 @@ def MyDrawContours(image, contour,delta_value):
             image[contour[i, 0, 1], contour[i, 0, 0]] = -image[contour[i, 0, 1], contour[i, 0, 0]]
 
 def MyContourCenter(contour):
-    center = np.mean(contour, axis=0)
-    return center
+    M = cv2.moments(contour)
+    if M['m00'] == 0:
+        M['m00'] = 0.001
+    x = M['m10']/M['m00']
+    y = M['m01']/M['m00']
+    return np.array((x, y))
 
 def MyNest(cont_idx, contours, hierachy, check_layer):
     if check_layer == 1:
         if hierachy[cont_idx][3] != -1:
-            father_center = MyContourCenter(contours[hierachy[cont_idx][3]])
-            curr_center = MyContourCenter(contours[cont_idx])
-            # 比较中心是否接近，不接近则不是它的爸爸
-            dist = np.linalg.norm(father_center.reshape(-1,)-curr_center.reshape(-1,))
-            if dist < 100:
-                return True
-            else:
-                return False
+            return True
+        else:
+            return False
     elif check_layer > 1:
         if hierachy[cont_idx][3] != -1:
             father_center = MyContourCenter(contours[hierachy[cont_idx][3]])
             curr_center = MyContourCenter(contours[cont_idx])
-            print(father_center, curr_center)
+            # print(father_center, curr_center)
             dist = np.linalg.norm(father_center.reshape(-1,)-curr_center.reshape(-1,))
             if dist < 100:
                 return MyNest(hierachy[cont_idx][3], contours, hierachy, check_layer-1)
@@ -166,10 +165,10 @@ def ImageProcess(image):
 
     # _, grad_thre = cv2.threshold(L_chn, 0, 255, cv2.THRESH_BINARY|cv2.THRESH_OTSU)
 
-    block_size = int(sqrt(image.shape[0]*image.shape[1]/17))
+    block_size = int(sqrt(image.shape[0]*image.shape[1]/14))
     if block_size%2 != 1:
         block_size += 1
-    thre_c = 7
+    thre_c = 8
 
     grad_thre = cv2.adaptiveThreshold(L_chn, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 
     block_size, thre_c
@@ -179,7 +178,7 @@ def ImageProcess(image):
 
     # get contours
     _, contours, hierachy = cv2.findContours(grad_thre,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
-    print(contours[0].shape)
+    # print(contours[0].shape)
     return contours, hierachy
 
 
@@ -259,13 +258,13 @@ if __name__ == "__main__":
     print(type(classifier.coef_), classifier.coef_)
     print(type(classifier.intercept_), classifier.intercept_)
 
-    for i in range(1, 18):
+    for i in range(300, 302):
         image_path = "../Pics/%03d.jpg"%int(i)
          
         image = cv2.imread(image_path)
         SHOW_IMAGE(image)
         # image = cv2.GaussianBlur(image, (3, 3), 0.0)
-        t_draw = img = np.zeros(image.shape, np.uint8)   
+        t_draw = np.zeros(image.shape, np.uint8)   
 
 
         contours, hierachy = ImageProcess(image)
@@ -279,7 +278,7 @@ if __name__ == "__main__":
             # 使用面积+长宽比筛
             t_min_rect = cv2.boundingRect(j)
             # if t_min_rect[2]*t_min_rect[3] < image.shape[0]*image.shape[1]/700:
-            if t_min_rect[2]*t_min_rect[3] > image.shape[0]*image.shape[1]/16:
+            if t_min_rect[2]*t_min_rect[3] > image.shape[0]*image.shape[1]/17:
                 # cv2.drawContours(t_draw, j, -1, (0,0,255), 1)
                 continue
             if t_min_rect[2]*t_min_rect[3] < 50:
@@ -294,19 +293,74 @@ if __name__ == "__main__":
             filted_once.append((idx, j))
 
         SHOW_IMAGE(t_draw)
-        t_draw = img = np.zeros(image.shape, np.uint8)  
+        t_draw = np.zeros(image.shape, np.uint8)  
         filted_twice = []
 
-        # 利用三重嵌套关系进行筛选
+        # 利用不存在儿子轮廓的轮廓 and 三重嵌套关系进行筛选
+        # 接下来是轮廓中心距离筛（待定） and 轮廓周长筛
         for j in filted_once:
-            if MyNest(j[0], contours, hierachy, 3):
+            # 自己周长 and 爸爸周长
+            self_peri = cv2.arcLength(j[1], True)
+            father_peri = cv2.arcLength(contours[hierachy[j[0]][3]], True)
+            if father_peri/self_peri > 2:
+                continue
+
+            
+            if hierachy[j[0]][2] == -1 and MyNest(j[0], contours, hierachy, 2):
+                # 找轮廓中心
+                tt_draw = copy.deepcopy(t_draw)
+
+                t_cont_center = MyContourCenter(j[1])
+                t_cont_center = [int(i) for i in t_cont_center]
+                t_cont_center = tuple(t_cont_center)
+                cv2.circle(tt_draw, t_cont_center, 50, (255, 255, 0))
+                cv2.drawContours(tt_draw, j[1], -1, (255, 255, 0))
+
+                t_cont_center = MyContourCenter(contours[hierachy[j[0]][3]])
+                t_cont_center = [int(i) for i in t_cont_center]
+                t_cont_center = tuple(t_cont_center)
+                cv2.circle(tt_draw, t_cont_center, 50, (255, 255, 255))
+                cv2.drawContours(tt_draw, contours[hierachy[j[0]][3]], -1, (255, 255, 255))
+                SHOW_IMAGE(tt_draw)
+
                 cv2.drawContours(t_draw, j[1], -1, (0,255,0), 1)
+                filted_twice.append(j)
             else:
                 cv2.drawContours(t_draw, j[1], -1, (0,0,255), 1)
+                pass
         SHOW_IMAGE(t_draw)
 
-        # for j in filted_once:
-        #     t_moments = cv2.moments(j)
+        t_draw = np.zeros(image.shape, np.uint8)  
+        filted_third = []
+        print(len(filted_twice))
+        if len(filted_twice) > 3:
+            # 那就拿爷爷再筛一次
+            for j in filted_twice:
+                self_peri = cv2.arcLength(j[1], True)
+                grafa_peri = cv2.arcLength(contours[hierachy[hierachy[j[0]][3]][3]], True)
+                if grafa_peri/self_peri > 3 or grafa_peri/self_peri < 2:
+                    cv2.drawContours(t_draw, j[1], -1, (0,0,255), 1)
+                else:
+                    cv2.drawContours(t_draw, j[1], -1, (0,255,0), 1)
+                    filted_third.append(j)
+                SHOW_IMAGE(t_draw)
+            print("ya:", len(filted_third))
+            # 那就包围矩形最大三个，谢谢
+            if len(filted_third) > 3:
+                bound_boxes = [(j[0], cv2.boundingRect(j[1])) for j in filted_third]
+                bound_boxes = sorted(bound_boxes, key=lambda j: j[1][2]*j[1][3], reverse=True)[:3]
+
+                t_draw = np.zeros(image.shape, np.uint8)  
+                for j in bound_boxes:
+                    cv2.drawContours(t_draw, contours[j[0]], -1, (0,0,255), 1)
+                    SHOW_IMAGE(t_draw)
+
+        elif len(filted_twice) == 3:
+            pass
+        
+        # t_draw = np.zeros(image.shape, np.uint8)  
+        # for j in filted_twice:
+        #     t_moments = cv2.moments(j[1])
         #     t_hu_moments = cv2.HuMoments(t_moments)
         #     try: 
         #         for k in range(0,7):
@@ -316,11 +370,9 @@ if __name__ == "__main__":
         #     # print(classifier.predict(t_hu_moments.reshape(1, 7)))
         #     # print(np.matmul(classifier.coef_, t_hu_moments.reshape(7,)) + classifier.intercept_)
         #     if classifier.predict(t_hu_moments.reshape(1, 7))[0] == 1:
-        #         cv2.drawContours(t_draw, j, -1, (0,255,0), 1)
-        #         filted_twice.append(j)
+        #         cv2.drawContours(t_draw, j[1], -1, (0,255,0), 1)
         #     else:
-        #         # cv2.drawContours(t_draw, j, -1, (0,255,255), 1)
-        #         pass
+        #         cv2.drawContours(t_draw, j[1], -1, (0,255,255), 1)
         # SHOW_IMAGE(t_draw)
 
 
