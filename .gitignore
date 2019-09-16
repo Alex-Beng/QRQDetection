@@ -3,3 +3,4 @@ BackupPorj
 *.exe
 __pycache__
 Pics
+*.bin
