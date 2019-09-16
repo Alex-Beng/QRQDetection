@@ -1,0 +1,5 @@
+BackupPorj
+*.o
+*.exe
+__pycache__
+Pics
