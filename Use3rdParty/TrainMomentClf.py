@@ -58,9 +58,21 @@ def MyNest(cont_idx, contours, hierachy, check_layer):
             dist = np.linalg.norm(father_center.reshape(-1,)-curr_center.reshape(-1,))
             if dist < 100:
                 return MyNest(hierachy[cont_idx][3], contours, hierachy, check_layer-1)
-                    
-
     return False
+
+def MyVecAngles(points):
+    vecs = [ [j-points[(i+1)%3], j-points[(i+2)%3]] for i,j in enumerate(points)]
+    angles = []
+    for v in vecs:
+        lens = [np.sqrt(x.dot(x)) for x in v]
+        # print("lens:", lens)
+        cos = v[0].dot(v[1])/(lens[0]*lens[1])
+        angle_ = np.arccos(cos)
+        # print("angle_:", angle_)
+        angle = angle_*360/2/np.pi
+        # print("angle:", angle)
+        angles.append(angle)
+    return angles
 
 def ImageProcessSobel(image):
     #  get L channel
@@ -258,7 +270,7 @@ if __name__ == "__main__":
     print(type(classifier.coef_), classifier.coef_)
     print(type(classifier.intercept_), classifier.intercept_)
 
-    for i in range(300, 302):
+    for i in range(3, 22):
         image_path = "../Pics/%03d.jpg"%int(i)
          
         image = cv2.imread(image_path)
@@ -332,12 +344,14 @@ if __name__ == "__main__":
 
         t_draw = np.zeros(image.shape, np.uint8)  
         filted_third = []
+        result_idxes = []
         print(len(filted_twice))
         if len(filted_twice) > 3:
             # 那就拿爷爷再筛一次
             for j in filted_twice:
                 self_peri = cv2.arcLength(j[1], True)
                 grafa_peri = cv2.arcLength(contours[hierachy[hierachy[j[0]][3]][3]], True)
+                print(self_peri, grafa_peri)
                 if grafa_peri/self_peri > 3 or grafa_peri/self_peri < 2:
                     cv2.drawContours(t_draw, j[1], -1, (0,0,255), 1)
                 else:
@@ -354,10 +368,29 @@ if __name__ == "__main__":
                 for j in bound_boxes:
                     cv2.drawContours(t_draw, contours[j[0]], -1, (0,0,255), 1)
                     SHOW_IMAGE(t_draw)
+                result_idxes = [j[0] for j in bound_boxes]
+            elif len(filted_third) == 3:
+                result_idxes = [j[0] for j in filted_third]
 
         elif len(filted_twice) == 3:
-            pass
+            result_idxes = [j[0] for j in filted_twice]
         
+        # 找中点
+        print(result_idxes)
+        points = [MyContourCenter(contours[j]).reshape(-1) for j in result_idxes]
+        angles = MyVecAngles(points)    
+        print(angles)
+        
+        mid_pnt_idx = angles.index(max(angles))
+        min_pnt = points[mid_pnt_idx]
+        min_pnt = tuple(min_pnt.astype(np.int16))
+        cv2.circle(image, min_pnt, 5, (255, 0, 0))
+        SHOW_IMAGE(image)
+
+        # 通过最小二乘获得两个边
+        
+
+        # 用nm的分类器
         # t_draw = np.zeros(image.shape, np.uint8)  
         # for j in filted_twice:
         #     t_moments = cv2.moments(j[1])
