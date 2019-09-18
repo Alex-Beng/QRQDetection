@@ -3,6 +3,14 @@ import cv2
 import datetime
 import numpy as np
 
+def GetImgPaths(folder_path):
+    paths = []
+    for fpathe,dirs,fs in os.walk(folder_path):
+        for f in fs:
+            paths.append(f)
+    return paths
+
+
 def MyDrawContours(image, contour,delta_value):
     pnt_num = contour.shape[0]
     if delta_value < 255:
@@ -54,3 +62,24 @@ def MyVecAngles(points):
         angles.append(angle)
     return angles
 
+def MyFitLine(points):
+    A = [ [v[0], 1] for v in points]
+    B = [v[1] for v in points]
+    A = np.array(A, dtype=np.float32).reshape(-1, 2)
+    B = np.array(B, dtype=np.float32).reshape(-1, 1)
+
+    # A_T_I = np.linalg.inv(A.T.dot(A))
+    A_T_I = np.matrix(A.T.dot(A))
+    
+
+    x = A_T_I.I.dot(A.T).dot(B)
+    return x
+
+def MyGetCor(x0, y0, z):
+    A = [[x0[i], y0[i]] for i in range(2)]
+    A = np.array(A, dtype=np.float32).reshape(2, 2)
+    A = np.matrix(A)
+    B = z.reshape(2, 1)
+
+    return A.I.dot(B)
+    

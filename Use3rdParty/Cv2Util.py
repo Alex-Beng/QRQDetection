@@ -12,14 +12,6 @@ def SHOW_IMAGE(image):
     cv2.destroyWindow(now)
 
 
-def GetImgPaths(folder_path):
-    paths = []
-    for fpathe,dirs,fs in os.walk(folder_path):
-        for f in fs:
-            paths.append(f)
-    return paths
-
-
 def ImageProcess(image):
     #  get L channel
     t_image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
