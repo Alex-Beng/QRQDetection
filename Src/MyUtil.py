@@ -82,4 +82,3 @@ def MyGetCor(x0, y0, z):
     B = z.reshape(2, 1)
 
     return A.I.dot(B)
-    
