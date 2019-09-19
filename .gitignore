@@ -4,3 +4,4 @@ BackupPorj
 __pycache__
 Pics
 *.bin
+.vscode

@@ -117,12 +117,15 @@ def FollowBorder(image, row, col, p2, NBD, contours):
 # suzuki 算法
 def FindContours(image):
     if np.max(image) > 1:
-        image = np.divide(image, 255).astype(np.int16)
+        image = image/255
+        image = image.astype(np.int16)
     
     
     # 图片长宽
+    # print(image.shape)
     numrows = image.shape[0]
     numcols = image.shape[1]
+    image = image.reshape(numrows, numcols)
     
     # 现轮廓和上一个轮廓的信息
     # [ 轮廓编号, 轮廓类型 ]
@@ -192,7 +195,7 @@ def FindContours(image):
 
                 # 跟踪轮廓！
                 FollowBorder(image, r, c, p2, NBD, contours)
-                print(image)
+                # print(image)
             if abs(image[r, c]) > 1:
                 LNBD[0] = abs(image[r, c])
                 LNBD[1] = hierachy[LNBD[0]-1][-1][1]

@@ -5,48 +5,52 @@ from Contours import *
 
 
 if __name__ == "__main__":
-    image = np.zeros((10, 11), dtype=np.int16)
-    image[0, 0] = 1
-    image[1, 0] = 1
-    image[2, 0] = 1
-    image[2, 1] = 1
-    image[2, 2] = 1
-    image[1, 2] = 1
-    image[0, 2] = 1
-    image[0, 1] = 1
+    # image = np.zeros((10, 11), dtype=np.int16)
+    # image[0, 0] = 1
+    # image[1, 0] = 1
+    # image[2, 0] = 1
+    # image[2, 1] = 1
+    # image[2, 2] = 1
+    # image[1, 2] = 1
+    # image[0, 2] = 1
+    # image[0, 1] = 1
 
-    image[0, 3] = 1
-    image[0, 4] = 1
-    image[1, 4] = 1
-    image[2, 4] = 1
-    image[2, 3] = 1
+    # image[0, 3] = 1
+    # image[0, 4] = 1
+    # image[1, 4] = 1
+    # image[2, 4] = 1
+    # image[2, 3] = 1
 
-    image[9, 9] = 1
+    # image[9, 9] = 1
     
 
 
-    # image = cv2.imread("../Pics/001.jpg")
+    image = cv2.imread("../Pics/001.jpg")
     
-    # t_image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
-    # t_cs = cv2.split(t_image)
-    # L_chn = t_cs[1]
+    t_image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
+    t_cs = cv2.split(t_image)
+    L_chn = t_cs[1]
 
-    # # adaptive threshold
-    # block_size = int(sqrt(image.shape[0]*image.shape[1]/14))
-    # if block_size%2 != 1:
-    #     block_size += 1
-    # thre_c = 8
+    # adaptive threshold
+    block_size = int(sqrt(image.shape[0]*image.shape[1]/14))
+    if block_size%2 != 1:
+        block_size += 1
+    thre_c = 8
 
-    # grad_thre = cv2.adaptiveThreshold(L_chn, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 
-    # block_size, thre_c
-    # )
-    # SHOW_IMAGE(grad_thre)
+    
+    grad_thre = cv2.adaptiveThreshold(L_chn, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 
+    block_size, thre_c
+    )
+    SHOW_IMAGE(grad_thre)
 
-    print(image)
-    contours, hierachy = FindContours(image)
+    contours, hierachy = FindContours(grad_thre)
+    t_draw = np.zeros(image.shape, dtype=np.uint8)
     for i in contours:
-        print(i)
-    print(hierachy)
+        MyDrawContours(t_draw, i, np.array([255, 255, 255]))
+    SHOW_IMAGE(t_draw) 
+    
+    
+    # print(hierachy)
     
 
 

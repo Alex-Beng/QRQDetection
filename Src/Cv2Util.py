@@ -31,3 +31,4 @@ def ImageProcess(image):
     # get contours
     _, contours, hierachy = cv2.findContours(grad_thre,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
     return contours, hierachy
+

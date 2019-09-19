@@ -12,17 +12,9 @@ def GetImgPaths(folder_path):
 
 
 def MyDrawContours(image, contour,delta_value):
-    pnt_num = contour.shape[0]
-    if delta_value < 255:
-        for i in range(pnt_num):
-            image[contour[i, 0, 1], contour[i, 0, 0]] += delta_value
-    elif delta_value == 255:
-        for i in range(pnt_num):
-            image[contour[i, 0, 1], contour[i, 0, 0]] += 1
-            image[contour[i, 0, 1], contour[i, 0, 0]] = -image[contour[i, 0, 1], contour[i, 0, 0]]
-    elif delta_value == 256:    
-        for i in range(pnt_num):
-            image[contour[i, 0, 1], contour[i, 0, 0]] = -image[contour[i, 0, 1], contour[i, 0, 0]]
+    delta_value = delta_value.astype(np.uint8)
+    for pnt in contour:
+        image[pnt[0], pnt[1]] += delta_value
 
 def MyContourCenter(contour):
     M = cv2.moments(contour)
