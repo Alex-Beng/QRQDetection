@@ -32,3 +32,26 @@ def ImageProcess(image):
     _, contours, hierachy = cv2.findContours(grad_thre,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
     return contours, hierachy
 
+def CvContourCenter(contour):
+    M = cv2.moments(contour)
+    if M['m00'] == 0:
+        M['m00'] = 0.001
+    x = M['m10']/M['m00']
+    y = M['m01']/M['m00']
+    return np.array((x, y))
+
+def CvNest(cont_idx, contours, hierachy, check_layer):
+    if check_layer == 1:
+        if hierachy[cont_idx][3] != -1:
+            return True
+        else:
+            return False
+    elif check_layer > 1:
+        if hierachy[cont_idx][3] != -1:
+            father_center = CvContourCenter(contours[hierachy[cont_idx][3]])
+            curr_center = CvContourCenter(contours[cont_idx])
+            # print(father_center, curr_center)
+            dist = np.linalg.norm(father_center.reshape(-1,)-curr_center.reshape(-1,))
+            if dist < 100:
+                return CvNest(hierachy[cont_idx][3], contours, hierachy, check_layer-1)
+    return False

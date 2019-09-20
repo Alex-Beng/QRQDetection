@@ -31,11 +31,20 @@ if __name__ == "__main__":
     t_cs = cv2.split(t_image)
     L_chn = t_cs[1]
 
+    My_L = MyBgr2L(image)
+    # My_L *= 255/np.max(My_L)
+    # SHOW_IMAGE(My_L.astype(np.uint8))
+    # SHOW_IMAGE(L_chn)
+    # SHOW_IMAGE(L_chn-My_L.astype(np.uint8))
+    # print(np.max(L_chn), np.max(My_L))
+
+    L_chn = My_L.astype(np.uint8)
+
     # adaptive threshold
     block_size = int(sqrt(image.shape[0]*image.shape[1]/14))
     if block_size%2 != 1:
         block_size += 1
-    thre_c = 8
+    thre_c = 4
 
     
     grad_thre = cv2.adaptiveThreshold(L_chn, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 
@@ -43,13 +52,13 @@ if __name__ == "__main__":
     )
     SHOW_IMAGE(grad_thre)
 
-    contours, hierachy = FindContours(grad_thre)
-    t_draw = np.zeros(image.shape, dtype=np.uint8)
-    for i in contours:
-        MyDrawContours(t_draw, i, np.array([255, 255, 255]))
-    SHOW_IMAGE(t_draw) 
+    # contours, hierachy = FindContours(grad_thre)
+    # t_draw = np.zeros(image.shape, dtype=np.uint8)
+    # for i in contours:
+    #     MyDrawContours(t_draw, i, np.array([0, 0, 255]))
+    # SHOW_IMAGE(t_draw) 
     
-    
+
     # print(hierachy)
     
 

@@ -16,28 +16,34 @@ def MyDrawContours(image, contour,delta_value):
     for pnt in contour:
         image[pnt[0], pnt[1]] += delta_value
 
+# 因为是二值图，所以Fij == 0/1
+# 可简化计算
 def MyContourCenter(contour):
-    M = cv2.moments(contour)
-    if M['m00'] == 0:
-        M['m00'] = 0.001
-    x = M['m10']/M['m00']
-    y = M['m01']/M['m00']
-    return np.array((x, y))
+    sum_x = 0
+    sum_y = 0
+    for pnt in contour:
+        sum_x += pnt[0]
+        sum_y += pnt[1]
+    sum_x /= len(contour)
+    sum_y /= len(contour)
+    return (sum_x, sum_y)
 
 def MyNest(cont_idx, contours, hierachy, check_layer):
     if check_layer == 1:
-        if hierachy[cont_idx][3] != -1:
+        if hierachy[cont_idx][0] != -1:
             return True
         else:
             return False
     elif check_layer > 1:
-        if hierachy[cont_idx][3] != -1:
-            father_center = MyContourCenter(contours[hierachy[cont_idx][3]])
+        if hierachy[cont_idx][0] != -1:
+            father_center = MyContourCenter(contours[hierachy[cont_idx][0]])
             curr_center = MyContourCenter(contours[cont_idx])
+            father_center = np.array(father_center).reshape(-1,)
+            curr_center = np.array(curr_center).reshape(-1,)
             # print(father_center, curr_center)
-            dist = np.linalg.norm(father_center.reshape(-1,)-curr_center.reshape(-1,))
+            dist = np.linalg.norm(father_center-curr_center)
             if dist < 100:
-                return MyNest(hierachy[cont_idx][3], contours, hierachy, check_layer-1)
+                return MyNest(hierachy[cont_idx][0], contours, hierachy, check_layer-1)
     return False
 
 def MyVecAngles(points):
@@ -47,9 +53,9 @@ def MyVecAngles(points):
         lens = [np.sqrt(x.dot(x)) for x in v]
         # print("lens:", lens)
         cos = v[0].dot(v[1])/(lens[0]*lens[1])
-        angle_ = np.arccos(cos)
+        angle_rad = np.arccos(cos)
         # print("angle_:", angle_)
-        angle = angle_*360/2/np.pi
+        angle = angle_rad*360/2/np.pi
         # print("angle:", angle)
         angles.append(angle)
     return angles
@@ -74,3 +80,27 @@ def MyGetCor(x0, y0, z):
     B = z.reshape(2, 1)
 
     return A.I.dot(B)
+
+
+# 只求L通道，可简化计算
+def MyBgr2L(src):
+    dst = np.zeros((src.shape[0], src.shape[1]), dtype=np.float32)
+    T = np.array(
+        [0.072169, 0.715160, 0.212671],
+     dtype=np.float32)
+
+
+    for r in range(src.shape[0]):
+        for c in range(src.shape[1]):
+            Y = T.dot(src[r, c].astype(np.float32).reshape(-1, 1))
+            # print(Y.shape)
+            Y = Y[0]/255
+            if Y > 0.008856451679035631:
+                dst[r, c] =  Y**(1/3)
+            else:
+                dst[r, c] = 7.787037037037035*Y + 0.13793103448275862
+            dst[r, c] = 116*dst[r, c] - 16
+            
+            if dst[r, c] < 0:
+                dst[r, c] = 0 
+    return dst
