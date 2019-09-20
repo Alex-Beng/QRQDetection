@@ -2,6 +2,7 @@ import os
 import cv2
 import datetime
 import numpy as np
+from Cv2Util import *
 
 def GetImgPaths(folder_path):
     paths = []
@@ -104,3 +105,54 @@ def MyBgr2L(src):
             if dst[r, c] < 0:
                 dst[r, c] = 0 
     return dst
+
+def MyIntegralImage(image):
+    numrows = image.shape[0]
+    numcols = image.shape[1]
+    int_image = np.zeros((numrows, numcols), dtype=np.int32)
+
+    for r in range(numrows):
+        row_sum = 0
+        for c in range(numcols):
+            row_sum += image[r, c]
+            if r == 0:
+                int_image[r, c] = row_sum
+            else:
+                int_image[r, c] = int_image[r-1, c] + row_sum
+    return int_image
+
+def MyadaptiveThreshold(image, block_size, thre_c):
+    numrows = image.shape[0]
+    numcols = image.shape[1]
+    int_image = MyIntegralImage(image)
+    # print(np.min(int_image), np.max(int_image))
+    # SHOW_IMAGE((int_image/np.max(int_image)*255).astype(np.uint8) )
+    # SHOW_IMAGE(image)
+    dst_image = np.zeros((numrows, numcols), dtype=np.uint8)
+    block_size //= 2
+    print()
+    for r in range(numrows):
+        for c in range(numcols):
+            l_r = r-block_size
+            l_c = c-block_size
+            r_r = r+block_size
+            r_c = c+block_size
+            if l_r < 0:
+                l_r = 0
+            if l_c < 0:
+                l_c = 0
+            if r_r >= numrows:
+                r_r = numrows-1
+            if r_c >= numcols:
+                r_c = numcols-1
+            # 利用积分图加速均值计算
+            neighbour_sum = int_image[r_r, r_c] - int_image[r_r, l_c] - int_image[l_r, r_c] + int_image[l_r, l_c]
+            # print(neighbour_sum)
+            pix_num = (r_r-l_r)*(r_c-l_c)
+            # if pix_num < 0:
+            #     print(l_r, l_c, r_r, r_c)
+            if image[r, c]*pix_num > neighbour_sum + thre_c*pix_num:
+                dst_image[r, c] = 255
+            else:
+                dst_image[r, c] = 0
+    return dst_image

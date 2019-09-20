@@ -25,7 +25,7 @@ if __name__ == "__main__":
     
 
 
-    image = cv2.imread("../Pics/001.jpg")
+    image = cv2.imread("./Pics/001.jpg")
     
     t_image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
     t_cs = cv2.split(t_image)
@@ -44,13 +44,18 @@ if __name__ == "__main__":
     block_size = int(sqrt(image.shape[0]*image.shape[1]/14))
     if block_size%2 != 1:
         block_size += 1
-    thre_c = 4
+    thre_c = 0
 
     
     grad_thre = cv2.adaptiveThreshold(L_chn, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 
     block_size, thre_c
     )
     SHOW_IMAGE(grad_thre)
+
+    grad_thre = MyadaptiveThreshold(L_chn, block_size, thre_c)
+    SHOW_IMAGE(grad_thre)
+
+    
 
     # contours, hierachy = FindContours(grad_thre)
     # t_draw = np.zeros(image.shape, dtype=np.uint8)
