@@ -3,6 +3,7 @@ import cv2
 import datetime
 import numpy as np
 from Cv2Util import *
+from Contours import *
 
 def GetImgPaths(folder_path):
     paths = []
@@ -156,3 +157,19 @@ def MyadaptiveThreshold(image, block_size, thre_c):
             else:
                 dst_image[r, c] = 0
     return dst_image
+
+def MyImageProcess(image):
+    l_chn = MyBgr2L(image).astype(np.uint8)
+
+    # adaptive threshold
+    block_size = int(sqrt(image.shape[0]*image.shape[1]/14))
+    if block_size%2 != 1:
+        block_size += 1
+    thre_c = 0
+
+    l_thre = MyadaptiveThreshold(l_chn, block_size, thre_c)
+    SHOW_IMAGE(l_thre)
+
+    contours, hierachy = FindContours(l_thre)
+
+    return contours, hierachy

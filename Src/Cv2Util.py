@@ -12,7 +12,7 @@ def SHOW_IMAGE(image):
     cv2.destroyWindow(now)
 
 
-def ImageProcess(image):
+def CvImageProcess(image):
     #  get L channel
     t_image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
     t_cs = cv2.split(t_image)

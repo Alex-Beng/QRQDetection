@@ -1,6 +1,8 @@
 from Cv2Util import *
 from MyUtil import *
 
+def MyMain(image):
+    pass
 
 # just fuck the code !!
 if __name__ == "__main__":
@@ -15,7 +17,7 @@ if __name__ == "__main__":
         image = cv2.imread(pic_path)
         image_area = image.shape[0]*image.shape[1]
 
-        contours, hierachy = ImageProcess(image)
+        contours, hierachy = CvImageProcess(image)
         hierachy = hierachy.reshape(-1, 4)
 
         #初始未筛选的轮廓

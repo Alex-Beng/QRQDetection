@@ -5,6 +5,20 @@ from Contours import *
 
 
 if __name__ == "__main__":
+    pic_root_path = "./Pics/"
+    pics_paths = GetImgPaths(pic_root_path)
+    pics_paths = [pic_root_path+i for i in pics_paths]
+    
+    for pic_path in pics_paths:
+        print()
+        print(pic_path)
+
+        image = cv2.imread(pic_path)
+        image_area = image.shape[0]*image.shape[1]
+        contours, hierachy = MyImageProcess(image)
+
+
+
     # image = np.zeros((10, 11), dtype=np.int16)
     # image[0, 0] = 1
     # image[1, 0] = 1
@@ -25,35 +39,26 @@ if __name__ == "__main__":
     
 
 
-    image = cv2.imread("./Pics/001.jpg")
-    
-    t_image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
-    t_cs = cv2.split(t_image)
-    L_chn = t_cs[1]
-
-    My_L = MyBgr2L(image)
-    # My_L *= 255/np.max(My_L)
+    # image = cv2.imread("./Pics/001.jpg")
+    # My_L = MyBgr2L(image)
     # SHOW_IMAGE(My_L.astype(np.uint8))
-    # SHOW_IMAGE(L_chn)
-    # SHOW_IMAGE(L_chn-My_L.astype(np.uint8))
-    # print(np.max(L_chn), np.max(My_L))
+    # L_chn = My_L.astype(np.uint8)
 
-    L_chn = My_L.astype(np.uint8)
+    # # adaptive threshold
+    # block_size = int(sqrt(image.shape[0]*image.shape[1]/14))
+    # if block_size%2 != 1:
+    #     block_size += 1
+    # thre_c = 0
 
-    # adaptive threshold
-    block_size = int(sqrt(image.shape[0]*image.shape[1]/14))
-    if block_size%2 != 1:
-        block_size += 1
-    thre_c = 0
+    # grad_thre = MyadaptiveThreshold(L_chn, block_size, thre_c)
+    # SHOW_IMAGE(grad_thre)
+
+    # contours, hierachy = FindContours(grad_thre)
 
     
-    grad_thre = cv2.adaptiveThreshold(L_chn, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 
-    block_size, thre_c
-    )
-    SHOW_IMAGE(grad_thre)
 
-    grad_thre = MyadaptiveThreshold(L_chn, block_size, thre_c)
-    SHOW_IMAGE(grad_thre)
+
+
 
     
 
