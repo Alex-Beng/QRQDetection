@@ -63,7 +63,7 @@ def MyNest(cont_idx, contours, hierachy, check_layer):
             curr_center = MyContourCenter(contours[cont_idx])
             father_center = np.array(father_center).reshape(-1,)
             curr_center = np.array(curr_center).reshape(-1,)
-            print(father_center, curr_center)
+            # print(father_center, curr_center)
             dist = np.linalg.norm(father_center-curr_center)
             if dist < 100:
                 return MyNest(hierachy[cont_idx][0], contours, hierachy, check_layer-1)
@@ -194,3 +194,31 @@ def MyImageProcess(image):
     contours, hierachy = FindContours(l_thre)
 
     return contours, hierachy
+
+# contour is (row col) rather than (x, y)
+def MyLocalCor(x_vec, y_vec, origin, contour):
+    corners = [233]*4
+
+    xy_sum_min = 100000
+    xy_sum_max = -1
+    x_sub_y_max = -1
+    y_sub_x_max = -1
+
+    for point in contour:
+        point = np.array(point[::-1])
+        t_vec = point-origin
+        t_cor = MyGetCor(x_vec, y_vec, t_vec)
+        x, y = t_cor[0], t_cor[1]
+        if x+y < xy_sum_min:
+            corners[0] = point
+            xy_sum_min = x+y
+        if x+y > xy_sum_max:
+            corners[1] = point
+            xy_sum_max = x+y
+        if x-y > x_sub_y_max:
+            corners[2] = point
+            x_sub_y_max = x-y
+        if y-x > y_sub_x_max:
+            corners[3] = point
+            y_sub_x_max = y-x
+    return corners

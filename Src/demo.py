@@ -150,10 +150,8 @@ if __name__ == "__main__":
         for point in points:
             # point = np.array(point[::-1])
             cv2.circle(image, tuple(point.astype(np.int16)), 50, (0, 0, 255))
-
-        
         SHOW_IMAGE(image)
-        continue
+
         angles = MyVecAngles(points)
 
         mid_pnt_idx = angles.index(max(angles))
@@ -167,74 +165,102 @@ if __name__ == "__main__":
         x_vec = points[x_pnt_idx]-points[mid_pnt_idx]
         y_vec = points[y_pnt_idx]-points[mid_pnt_idx]
 
-        # 三个定位区的最外轮廓
+        
         out_cont_idxes = [hierachy[ hierachy[j][0]-2 ][0]-2 for j in result_idxes]
         out_conts = [contours[j] for j in out_cont_idxes]
         
-        # 首先搞qrcode左上点
+        # 三个定位区的最外轮廓
         mid_out_cont = out_conts[mid_pnt_idx]
+        y_out_cont = out_conts[y_pnt_idx]
+        x_out_cont = out_conts[x_pnt_idx]
+
+        t_draw = np.zeros(image.shape, np.uint8) 
+        MyDrawContours(t_draw, mid_out_cont, np.array([255, 0, 0]))
+        MyDrawContours(t_draw, y_out_cont, np.array([0, 255, 0]))
+        MyDrawContours(t_draw, x_out_cont, np.array([0, 0, 255]))
+        SHOW_IMAGE(t_draw)
+        # continue
+
+        # 对于定位区外轮廓，获得
+        # *_out_cont_corners = [[-x -y], [x, -y], [-x, y], [x, y]]
+        mid_out_cont_corners = MyLocalCor(x_vec, y_vec, points[mid_pnt_idx], mid_out_cont)
+        y_out_cont_corners = MyLocalCor(x_vec, y_vec, points[y_pnt_idx], y_out_cont)
+        x_out_cont_corners = MyLocalCor(x_vec, y_vec, points[x_pnt_idx], x_out_cont)
+
+        # t_draw = np.zeros(image.shape, np.uint8) 
+        color = [(128, 255, 0), (255, 255, 0), (0, 255, 255), (255, 0, 255)]
+        for c_idx, corner in enumerate(mid_out_cont_corners):
+            cv2.circle(t_draw, tuple(corner.astype(np.int16)), 10, color[c_idx])
+        for c_idx, corner in enumerate(y_out_cont_corners):
+            cv2.circle(t_draw, tuple(corner.astype(np.int16)), 10, color[c_idx])
+        for c_idx, corner in enumerate(x_out_cont_corners):
+            cv2.circle(t_draw, tuple(corner.astype(np.int16)), 10, color[c_idx])
+        SHOW_IMAGE(t_draw)
+
         # cv2.drawContours(image, mid_out_cont.reshape(-1, 1, 2), -1, (0,255,128), 3)
         # SHOW_IMAGE(image)
 
-        t = 10000
-        qr_cor_1 = None
-        for point in mid_out_cont:
-            # point = np.array(point[::-1])
-            # print(type(point))
-            t_cor = MyGetCor(x_vec, y_vec, point-points[mid_pnt_idx]) 
-            if np.sum(t_cor) < t:
-                t = np.sum(t_cor)
-                qr_cor_1 = point
-            # print(t_cor)
 
-        # qr_cor_1 = tuple(qr_cor_1.astype(np.int16))
-        cv2.circle(image, tuple(qr_cor_1), 10, (255, 0, 0))
-        print("qr code cor1")
-        SHOW_IMAGE(image)            
 
-        # 搞qrcode 2点
-        qr_cor_2 = None
-        y_out_cont = out_conts[y_pnt_idx]
+        # t = 10000
+        # qr_cor_1 = None
+        # for point in mid_out_cont:
+        #     # point = np.array(point[::-1])
+        #     # print(type(point))
+        #     t_cor = MyGetCor(x_vec, y_vec, point-points[mid_pnt_idx]) 
+        #     if np.sum(t_cor) < t:
+        #         t = np.sum(t_cor)
+        #         qr_cor_1 = point
+        #     # print(t_cor)
 
-        t = -10000
-        for point in y_out_cont:
-            point = np.array(point[::-1])
-            t_cor = MyGetCor(x_vec, y_vec, point-points[mid_pnt_idx])
-            if (t_cor[1]-qr_cor_1[1])-(t_cor[0]-qr_cor_1[0]) > t:
-                t = (t_cor[1]-qr_cor_1[1])-(t_cor[0]-qr_cor_1[0])
-                qr_cor_2 = point
-        # print(qr_cor_2)
-        # qr_cor_2 = tuple(qr_cor_2.astype(np.int16))
-        cv2.circle(image, tuple(qr_cor_2), 10, (255, 0, 0))
-        print("qr code cor2")
-        SHOW_IMAGE(image)
+        # # qr_cor_1 = tuple(qr_cor_1.astype(np.int16))
+        # cv2.circle(image, tuple(qr_cor_1), 10, (255, 0, 0))
+        # print("qr code cor1")
+        # SHOW_IMAGE(image)            
 
-        # 搞qrcode 3点
-        qr_cor_3 = None
-        x_out_cont = out_conts[x_pnt_idx]
+        # # 搞qrcode 2点
+        # qr_cor_2 = None
+        
 
-        t = -10000
-        for point in x_out_cont:
-            t_cor = MyGetCor(x_vec, y_vec, point-points[mid_pnt_idx])
-            if (t_cor[0]-qr_cor_1[0])-(t_cor[1]-qr_cor_1[1]) > t:
-                t = (t_cor[0]-qr_cor_1[0])-(t_cor[1]-qr_cor_1[1])
-                qr_cor_3 = point
-        print(qr_cor_3)
-        # qr_cor_3 = tuple(qr_cor_3.astype(np.int16))
-        cv2.circle(image, tuple(qr_cor_3.astype(np.int16)), 10, (255, 0, 0))
-        print("qr code cor3")
+        # t = -10000
+        # for point in y_out_cont:
+        #     point = np.array(point[::-1])
+        #     t_cor = MyGetCor(x_vec, y_vec, point-points[mid_pnt_idx])
+        #     if (t_cor[1]-qr_cor_1[1])-(t_cor[0]-qr_cor_1[0]) > t:
+        #         t = (t_cor[1]-qr_cor_1[1])-(t_cor[0]-qr_cor_1[0])
+        #         qr_cor_2 = point
+        # # print(qr_cor_2)
+        # # qr_cor_2 = tuple(qr_cor_2.astype(np.int16))
+        # cv2.circle(image, tuple(qr_cor_2), 10, (255, 0, 0))
+        # print("qr code cor2")
         # SHOW_IMAGE(image)
 
-        # 搞qrcode 4点
-        qr_cor_4 = qr_cor_3 + (qr_cor_2-qr_cor_1)
+        # # 搞qrcode 3点
+        # qr_cor_3 = None
+        
 
-        # 画出包围盒
-        cv2.line(image, tuple(qr_cor_1.astype(np.int16)), tuple(qr_cor_2.astype(np.int16)), (0, 255, 0), 3)
-        cv2.line(image, tuple(qr_cor_2.astype(np.int16)), tuple(qr_cor_4.astype(np.int16)), (0, 255, 0), 3)
-        cv2.line(image, tuple(qr_cor_4.astype(np.int16)), tuple(qr_cor_3.astype(np.int16)), (0, 255, 0), 3)
-        cv2.line(image, tuple(qr_cor_3.astype(np.int16)), tuple(qr_cor_1.astype(np.int16)), (0, 255, 0), 3)
-        print("final result")
-        SHOW_IMAGE(image)
+        # t = -10000
+        # for point in x_out_cont:
+        #     t_cor = MyGetCor(x_vec, y_vec, point-points[mid_pnt_idx])
+        #     if (t_cor[0]-qr_cor_1[0])-(t_cor[1]-qr_cor_1[1]) > t:
+        #         t = (t_cor[0]-qr_cor_1[0])-(t_cor[1]-qr_cor_1[1])
+        #         qr_cor_3 = point
+        # print(qr_cor_3)
+        # # qr_cor_3 = tuple(qr_cor_3.astype(np.int16))
+        # cv2.circle(image, tuple(qr_cor_3.astype(np.int16)), 10, (255, 0, 0))
+        # print("qr code cor3")
+        # # SHOW_IMAGE(image)
+
+        # # 搞qrcode 4点
+        # qr_cor_4 = qr_cor_3 + (qr_cor_2-qr_cor_1)
+
+        # # 画出包围盒
+        # cv2.line(image, tuple(qr_cor_1.astype(np.int16)), tuple(qr_cor_2.astype(np.int16)), (0, 255, 0), 3)
+        # cv2.line(image, tuple(qr_cor_2.astype(np.int16)), tuple(qr_cor_4.astype(np.int16)), (0, 255, 0), 3)
+        # cv2.line(image, tuple(qr_cor_4.astype(np.int16)), tuple(qr_cor_3.astype(np.int16)), (0, 255, 0), 3)
+        # cv2.line(image, tuple(qr_cor_3.astype(np.int16)), tuple(qr_cor_1.astype(np.int16)), (0, 255, 0), 3)
+        # print("final result")
+        # SHOW_IMAGE(image)
 
         # mid_pnt = points[mid_pnt_idx]
         # mid_pnt = tuple(mid_pnt.astype(np.int16))
