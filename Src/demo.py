@@ -147,10 +147,10 @@ if __name__ == "__main__":
         # result_idxes = [hierachy[hierachy[j][3]][3] for j in result_idxes]  # 用最外面的轮廓
         cont_points = [contours[j] for j in result_idxes]   
         points = [MyContourCenter(contours[j]) for j in result_idxes]
-        for point in points:
-            # point = np.array(point[::-1])
-            cv2.circle(image, tuple(point.astype(np.int16)), 50, (0, 0, 255))
-        SHOW_IMAGE(image)
+        # for point in points:
+        #     # point = np.array(point[::-1])
+        #     cv2.circle(image, tuple(point.astype(np.int16)), 50, (0, 0, 255))
+        # SHOW_IMAGE(image)
 
         angles = MyVecAngles(points)
 
@@ -159,8 +159,8 @@ if __name__ == "__main__":
         del t_idxes[mid_pnt_idx]
         x_pnt_idx = t_idxes[0]
         y_pnt_idx = t_idxes[1]
-        print(x_pnt_idx, mid_pnt_idx, y_pnt_idx)
-        print(angles)
+        # print(x_pnt_idx, mid_pnt_idx, y_pnt_idx)
+        # print(angles)
 
         x_vec = points[x_pnt_idx]-points[mid_pnt_idx]
         y_vec = points[y_pnt_idx]-points[mid_pnt_idx]
@@ -189,127 +189,27 @@ if __name__ == "__main__":
 
         # t_draw = np.zeros(image.shape, np.uint8) 
         color = [(128, 255, 0), (255, 255, 0), (0, 255, 255), (255, 0, 255)]
+        all_corners = []
         for c_idx, corner in enumerate(mid_out_cont_corners):
+            all_corners.append(corner)
             cv2.circle(t_draw, tuple(corner.astype(np.int16)), 10, color[c_idx])
+            # SHOW_IMAGE(t_draw)
         for c_idx, corner in enumerate(y_out_cont_corners):
+            all_corners.append(corner)
             cv2.circle(t_draw, tuple(corner.astype(np.int16)), 10, color[c_idx])
         for c_idx, corner in enumerate(x_out_cont_corners):
+            all_corners.append(corner)
             cv2.circle(t_draw, tuple(corner.astype(np.int16)), 10, color[c_idx])
         SHOW_IMAGE(t_draw)
 
-        # cv2.drawContours(image, mid_out_cont.reshape(-1, 1, 2), -1, (0,255,128), 3)
-        # SHOW_IMAGE(image)
+        qrc_width = 300
+        persp_trans = MyGetPerspTrans(all_corners, qrc_width)
+        # print(persp_trans)
 
+        loss_corner_uv = np.array([300, 300, 1], dtype=np.float32)
+        persp_trans = np.matrix(persp_trans)
+        loss_corner_xy = persp_trans.dot(loss_corner_uv).astype(np.int16)
+        # print(loss_corner_xy)
 
-
-        # t = 10000
-        # qr_cor_1 = None
-        # for point in mid_out_cont:
-        #     # point = np.array(point[::-1])
-        #     # print(type(point))
-        #     t_cor = MyGetCor(x_vec, y_vec, point-points[mid_pnt_idx]) 
-        #     if np.sum(t_cor) < t:
-        #         t = np.sum(t_cor)
-        #         qr_cor_1 = point
-        #     # print(t_cor)
-
-        # # qr_cor_1 = tuple(qr_cor_1.astype(np.int16))
-        # cv2.circle(image, tuple(qr_cor_1), 10, (255, 0, 0))
-        # print("qr code cor1")
-        # SHOW_IMAGE(image)            
-
-        # # 搞qrcode 2点
-        # qr_cor_2 = None
-        
-
-        # t = -10000
-        # for point in y_out_cont:
-        #     point = np.array(point[::-1])
-        #     t_cor = MyGetCor(x_vec, y_vec, point-points[mid_pnt_idx])
-        #     if (t_cor[1]-qr_cor_1[1])-(t_cor[0]-qr_cor_1[0]) > t:
-        #         t = (t_cor[1]-qr_cor_1[1])-(t_cor[0]-qr_cor_1[0])
-        #         qr_cor_2 = point
-        # # print(qr_cor_2)
-        # # qr_cor_2 = tuple(qr_cor_2.astype(np.int16))
-        # cv2.circle(image, tuple(qr_cor_2), 10, (255, 0, 0))
-        # print("qr code cor2")
-        # SHOW_IMAGE(image)
-
-        # # 搞qrcode 3点
-        # qr_cor_3 = None
-        
-
-        # t = -10000
-        # for point in x_out_cont:
-        #     t_cor = MyGetCor(x_vec, y_vec, point-points[mid_pnt_idx])
-        #     if (t_cor[0]-qr_cor_1[0])-(t_cor[1]-qr_cor_1[1]) > t:
-        #         t = (t_cor[0]-qr_cor_1[0])-(t_cor[1]-qr_cor_1[1])
-        #         qr_cor_3 = point
-        # print(qr_cor_3)
-        # # qr_cor_3 = tuple(qr_cor_3.astype(np.int16))
-        # cv2.circle(image, tuple(qr_cor_3.astype(np.int16)), 10, (255, 0, 0))
-        # print("qr code cor3")
-        # # SHOW_IMAGE(image)
-
-        # # 搞qrcode 4点
-        # qr_cor_4 = qr_cor_3 + (qr_cor_2-qr_cor_1)
-
-        # # 画出包围盒
-        # cv2.line(image, tuple(qr_cor_1.astype(np.int16)), tuple(qr_cor_2.astype(np.int16)), (0, 255, 0), 3)
-        # cv2.line(image, tuple(qr_cor_2.astype(np.int16)), tuple(qr_cor_4.astype(np.int16)), (0, 255, 0), 3)
-        # cv2.line(image, tuple(qr_cor_4.astype(np.int16)), tuple(qr_cor_3.astype(np.int16)), (0, 255, 0), 3)
-        # cv2.line(image, tuple(qr_cor_3.astype(np.int16)), tuple(qr_cor_1.astype(np.int16)), (0, 255, 0), 3)
-        # print("final result")
-        # SHOW_IMAGE(image)
-
-        # mid_pnt = points[mid_pnt_idx]
-        # mid_pnt = tuple(mid_pnt.astype(np.int16))
-        # cv2.circle(image, mid_pnt, 50, (255, 0, 0))
-        # SHOW_IMAGE(image)
-
-
-
-        # la_points = [cont_points[mid_pnt_idx]]
-        # lb_points = [cont_points[mid_pnt_idx]]
-
-        # cnt = 0
-        # for i in range(3):
-        #     if i == mid_pnt_idx:
-        #         continue
-        #     if cnt == 0:
-        #         la_points.append(cont_points[i])
-        #         cnt += 1
-        #     else:
-        #         lb_points.append(cont_points[i])
-        # # print(la_points[1][:3], lb_points[1][:3])
-        # for cont in la_points:
-        #     cont = cont.reshape(-1, 1, 2)
-        #     cv2.drawContours(image,  cont, -1, (0,255,128), 3)
-        # SHOW_IMAGE(image)
-
-        # for cont in lb_points:
-        #     cont = cont.reshape(-1, 1, 2)
-        #     cv2.drawContours(image,  cont, -1, (255,255,128), 3)
-        # SHOW_IMAGE(image)
-
-        # la_points = np.concatenate(la_points, axis=0)
-        # lb_points = np.concatenate(lb_points, axis=0)
-        
-        # xa = MyFitLine(la_points)
-        # xb = MyFitLine(lb_points)
-
-        # # print(xa, xb)
-        # left_x = np.array([-10000, 1], dtype=np.float32)
-        # righ_x = np.array([10000, 1], dtype=np.float32)
-        
-        # a_l_y = left_x.dot(xa)
-        # a_r_y = righ_x.dot(xa)
-        # cv2.line(image, (-10000, a_l_y), (10000, a_r_y), (255, 0, 0), 3)
-        # SHOW_IMAGE(image)
-
-        # b_l_y = left_x.dot(xb)
-        # b_r_y = righ_x.dot(xb)
-        # cv2.line(image, (-10000, b_l_y), (10000, b_r_y), (255, 0, 0), 3)
-        # SHOW_IMAGE(image)
-
-
+        cv2.circle(image, (loss_corner_xy[0, 0], loss_corner_xy[0, 1]), 10, (255, 128, 128))
+        SHOW_IMAGE(image)

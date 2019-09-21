@@ -213,13 +213,75 @@ def MyLocalCor(x_vec, y_vec, origin, contour):
             corners[0] = point
             xy_sum_min = x+y
         if x+y > xy_sum_max:
-            corners[1] = point
+            corners[3] = point
             xy_sum_max = x+y
         if x-y > x_sub_y_max:
-            corners[2] = point
+            corners[1] = point
             x_sub_y_max = x-y
         if y-x > y_sub_x_max:
-            corners[3] = point
+            corners[2] = point
             y_sub_x_max = y-x
     return corners
 
+def MyGetPerspTrans(all_corners, width):
+    scale1 = (np.linalg.norm(all_corners[0]-all_corners[1]) + np.linalg.norm(all_corners[8]-all_corners[9])) /2/np.linalg.norm(all_corners[9]-all_corners[0]) 
+    scale2 = (np.linalg.norm(all_corners[0]-all_corners[2]) + np.linalg.norm(all_corners[6]-all_corners[4])) /2/np.linalg.norm(all_corners[6]-all_corners[0]) 
+    scale = (scale1+scale2)/2
+
+    rect_width = int(width*scale)
+    # 计算对应点
+    corr_corners = []
+    
+    origins = [np.array([0, 0]), np.array([0, width-rect_width]), np.array([width-rect_width, 0])]
+    for origin in origins:
+        corr_corners.append(np.array([0, 0]) + origin)
+        corr_corners.append(np.array([rect_width, 0]) + origin)
+        corr_corners.append(np.array([0, rect_width]) + origin)
+        corr_corners.append(np.array([rect_width, rect_width]) + origin)
+
+    # print(corr_corners)
+    # print(all_corners)
+    # A & B
+    A = []
+    B = []
+    for xy, uv in zip(corr_corners, all_corners):
+        u = uv[0]
+        v = uv[1]
+        x = xy[0]
+        y = xy[1]
+        A.append(
+            np.array([
+                x, y, 1, 0, 0, 0, -x*u, -y*u
+            ])
+        )
+        A.append(
+            np.array([
+                0, 0, 0, x, y, 1,-x*v, -y*v
+            ])
+        )
+        B.append(
+            np.array([
+                u
+            ])
+        )
+        B.append(
+            np.array([
+                v
+            ])
+        )
+    A = np.array(A, dtype=np.float32).reshape(24, 8)
+    B = np.array(B, dtype=np.float32).reshape(24, 1)
+
+    # print(A)
+    # print(B)
+    # 计算最小二乘解
+    A_T_I = np.matrix(A.T.dot(A))
+    x = A_T_I.I.dot(A.T).dot(B)
+    yayaya = np.array([1])
+    return np.vstack((x, yayaya)).reshape(3, 3)
+
+# def MyGetLostCorner(refer_corners, out_three_corners):
+#     delta = []
+#     for i in range(1, 4):
+#         delta.append(refer_corners[i] - refer_corners[0])
+#     scale = [delta[] for i in range(2)]
