@@ -5,39 +5,45 @@ from Contours import *
 
 
 if __name__ == "__main__":
-    pic_root_path = "./Pics/"
-    pics_paths = GetImgPaths(pic_root_path)
-    pics_paths = [pic_root_path+i for i in pics_paths]
+    # pic_root_path = "./Pics/"
+    # pics_paths = GetImgPaths(pic_root_path)
+    # pics_paths = [pic_root_path+i for i in pics_paths]
     
-    for pic_path in pics_paths:
-        print()
-        print(pic_path)
+    # for pic_path in pics_paths:
+    #     print()
+    #     print(pic_path)
 
-        image = cv2.imread(pic_path)
-        image_area = image.shape[0]*image.shape[1]
-        contours, hierachy = MyImageProcess(image)
+    #     image = cv2.imread(pic_path)
+    #     image_area = image.shape[0]*image.shape[1]
+    #     contours, hierachy = MyImageProcess(image)
 
 
 
-    # image = np.zeros((10, 11), dtype=np.int16)
-    # image[0, 0] = 1
-    # image[1, 0] = 1
-    # image[2, 0] = 1
-    # image[2, 1] = 1
-    # image[2, 2] = 1
-    # image[1, 2] = 1
-    # image[0, 2] = 1
-    # image[0, 1] = 1
+    image = np.zeros((10, 11), dtype=np.int16)
+    image[0, 0] = 1
+    image[1, 0] = 1
+    image[2, 0] = 1
+    image[2, 1] = 1
+    image[2, 2] = 1
+    image[1, 2] = 1
+    image[0, 2] = 1
+    image[0, 1] = 1
 
-    # image[0, 3] = 1
-    # image[0, 4] = 1
-    # image[1, 4] = 1
-    # image[2, 4] = 1
-    # image[2, 3] = 1
+    image[0, 3] = 1
+    image[0, 4] = 1
+    image[1, 4] = 1
+    image[2, 4] = 1
+    image[2, 3] = 1
 
-    # image[9, 9] = 1
+    image[9, 9] = 1
+    print(image)
     
-
+    contours, hierachy = FindContours(image)
+    for i in contours:
+        print(i)
+    print()
+    for i in hierachy:
+        print(i)
 
     # image = cv2.imread("./Pics/001.jpg")
     # My_L = MyBgr2L(image)

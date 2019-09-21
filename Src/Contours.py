@@ -169,7 +169,7 @@ def FindContours(image):
                 NBD[0] += 1
                 if image[r, c] > 1:
                     LNBD[0] = int(image[r, c]) 
-                    LNBD[1] = hierachy[LNBD[0]-1][-1][0]
+                    LNBD[1] = hierachy[LNBD[0]-1][-1][1]
                 p2 = (r, c+1)
                 border_start_found = True
             
@@ -178,7 +178,9 @@ def FindContours(image):
                 t_node[1] = -1
                 t_node[2] = -1
                 # 确定关系
+                # print(NBD, LNBD)
                 if NBD[1] == LNBD[1]:
+                    # print("same layer")
                     t_node[0] = hierachy[LNBD[0]-1][0]
                     t_node[2] = hierachy[t_node[0]-1][1]
                     hierachy[t_node[0]-1][1] = NBD[0]
@@ -187,12 +189,12 @@ def FindContours(image):
                 else:
                     if hierachy[LNBD[0]-1][1] != -1:
                         t_node[2] = hierachy[LNBD[0]-1][1]
-
+                    # print("hello son")
                     t_node[0] = LNBD[0]
                     hierachy[LNBD[0]-1][1] = NBD[0]
                     t_node[-1] = copy.deepcopy(NBD)
                     hierachy.append(copy.deepcopy(t_node))
-
+                # print(t_node)
                 # 跟踪轮廓！
                 FollowBorder(image, r, c, p2, NBD, contours)
                 # print(image)

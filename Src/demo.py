@@ -1,12 +1,9 @@
 from Cv2Util import *
 from MyUtil import *
 
-def MyMain(image):
-    pass
-
 # just fuck the code !!
 if __name__ == "__main__":
-    pic_root_path = "../Pics/"
+    pic_root_path = "./Pics/"
     pics_paths = GetImgPaths(pic_root_path)
     pics_paths = [pic_root_path+i for i in pics_paths]
     
@@ -17,15 +14,16 @@ if __name__ == "__main__":
         image = cv2.imread(pic_path)
         image_area = image.shape[0]*image.shape[1]
 
-        contours, hierachy = CvImageProcess(image)
-        hierachy = hierachy.reshape(-1, 4)
+        contours, hierachy = MyImageProcess(image)
 
         #初始未筛选的轮廓
         t_draw = np.zeros(image.shape, np.uint8) 
         for cont in contours:
-            cv2.drawContours(t_draw, cont, -1, (0,0,255), 1)
+            MyDrawContours(t_draw, cont, np.array([0, 0, 255]))
+            # MyDrawContours(t_draw, cont, -1, (0,0,255), 1)
         print("raw num: %d"%len(contours))
         SHOW_IMAGE(t_draw)
+
 
         # 第一轮用面积加长宽比筛选
         area_rate_thre = 17
@@ -34,8 +32,14 @@ if __name__ == "__main__":
 
         filted_once = []
         t_draw = np.zeros(image.shape, np.uint8) 
-        for cont_idx, cont in enumerate(contours):
-            t_bound_rect = cv2.boundingRect(cont)
+        for cont_idx, cont in enumerate(contours[1:]):
+
+            if len(cont) < 50:
+                # print(cont)
+                continue
+                
+            t_bound_rect = MyBoundingBox(cont)
+            # print(t_bound_rect)
             t_area = t_bound_rect[2]*t_bound_rect[3]
             t_wlrate = t_bound_rect[2]/t_bound_rect[3]
 
@@ -45,30 +49,55 @@ if __name__ == "__main__":
                         or t_wlrate > 2:
                 continue
             else:
-                cv2.drawContours(t_draw, cont, -1, (0,255,0), 1)
-                filted_once.append((cont_idx, cont))
+                MyDrawContours(t_draw, cont, np.array([0, 255, 0]))
+                # cv2.drawContours(t_draw, cont, -1, (0,255,0), 1)
+                filted_once.append(
+                    copy.deepcopy((cont_idx, cont))
+                    )
         print("once num: %d"%len(filted_once))
         SHOW_IMAGE(t_draw)
+
 
         # 第二轮使用轮廓关系进行筛选
         filted_twice = []
         t_draw = np.zeros(image.shape, np.uint8)  
         for cont_idx, cont in filted_once:
             # 先康康有没有爸爸，没有爸爸肯定不是
-            if hierachy[cont_idx][3] == -1:
+            if hierachy[cont_idx][0] == -1:
                 continue
             
-            self_peri = cv2.arcLength(cont, True)
-            fath_peri = cv2.arcLength(contours[hierachy[cont_idx][3]], True)
+            self_peri = MyArcLen(cont)
+            fath_peri = MyArcLen(contours[hierachy[cont_idx][0]])
+            
+            t_d = np.zeros(image.shape, np.uint8)  
+            father_center = MyContourCenter(contours[hierachy[cont_idx][0]])
+            curr_center = MyContourCenter(contours[cont_idx])
+            father_center = (int(father_center[0]), int(father_center[1]))
+            curr_center = (int(curr_center[0]), int(curr_center[1]))
+            
+            MyDrawContours(t_d, contours[cont_idx], np.array([255, 0, 0]))
+            MyDrawContours(t_d, contours[hierachy[cont_idx][0]], np.array([255, 255, 0]))
+            cv2.circle(t_d, father_center, 50, (255, 0, 0))
+            cv2.circle(t_d, curr_center, 50, (255, 255, 0))
+            SHOW_IMAGE(t_d)
+
+
             if fath_peri/self_peri < 2 \
-                and hierachy[cont_idx][2] == -1 and MyNest(cont_idx, contours, hierachy, 2):
-                cv2.drawContours(t_draw, cont, -1, (0,255,0), 1)
-                filted_twice.append((cont_idx, cont))
+                and hierachy[cont_idx][1] == -1 and MyNest(cont_idx, contours, hierachy, 1):
+                # and hierachy[cont_idx][1] == -1 :
+                
+                # cv2.drawContours(t_draw, cont, -1, (0,255,0), 1)
+                MyDrawContours(t_draw, cont, np.array([0, 255, 0]))
+                filted_twice.append(
+                    copy.deepcopy((cont_idx, cont))
+                    )
             else:
                 continue
                 
         print("twice num: %d"%len(filted_twice))
         SHOW_IMAGE(t_draw)
+
+        break
 
         result_idxes = []
         t_draw = np.zeros(image.shape, np.uint8)  

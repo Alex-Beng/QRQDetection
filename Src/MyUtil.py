@@ -12,6 +12,27 @@ def GetImgPaths(folder_path):
             paths.append(f)
     return paths
 
+def MyBoundingBox(contour):
+    x_min = min(contour, key=lambda pnt: pnt[0])[0]
+    x_max = max(contour, key=lambda pnt: pnt[0])[0]
+    y_min = min(contour, key=lambda pnt: pnt[1])[1]
+    y_max = max(contour, key=lambda pnt: pnt[1])[1]
+    return (x_min, y_min, x_max-x_min, y_max-y_min)
+
+# 因为是四领域，所以 |dx| + |dy| 值域恒为1...
+# 所以直接返数组长
+def MyArcLen(contour):
+    return len(contour)
+    # prev_pnt = contour[-1]
+    # curve_len = 0.0
+    # for curr_pnt in range(contour):
+    #     dx = curr_pnt[0] - prev_pnt[0]
+    #     dy = curr_pnt[1] - prev_pnt[1]
+    #     sum_d = dx + dy
+    #     if sum_d == 1:
+    #         curve_len += 1.0
+
+        
 
 def MyDrawContours(image, contour,delta_value):
     delta_value = delta_value.astype(np.uint8)
@@ -37,12 +58,12 @@ def MyNest(cont_idx, contours, hierachy, check_layer):
         else:
             return False
     elif check_layer > 1:
-        if hierachy[cont_idx][0] != -1:
+        if hierachy[cont_idx][0] != -1:            
             father_center = MyContourCenter(contours[hierachy[cont_idx][0]])
             curr_center = MyContourCenter(contours[cont_idx])
             father_center = np.array(father_center).reshape(-1,)
             curr_center = np.array(curr_center).reshape(-1,)
-            # print(father_center, curr_center)
+            print(father_center, curr_center)
             dist = np.linalg.norm(father_center-curr_center)
             if dist < 100:
                 return MyNest(hierachy[cont_idx][0], contours, hierachy, check_layer-1)
@@ -165,7 +186,7 @@ def MyImageProcess(image):
     block_size = int(sqrt(image.shape[0]*image.shape[1]/14))
     if block_size%2 != 1:
         block_size += 1
-    thre_c = 0
+    thre_c = -1
 
     l_thre = MyadaptiveThreshold(l_chn, block_size, thre_c)
     SHOW_IMAGE(l_thre)
