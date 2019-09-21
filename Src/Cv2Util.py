@@ -4,12 +4,18 @@ import datetime
 import numpy as np
 from math import *
 
+DEBUGING = True
+DEBUGING = False
+
 def SHOW_IMAGE(image):
-    now = datetime.datetime.now()
-    now = str(now)
-    cv2.imshow(now, image)
-    cv2.waitKey()
-    cv2.destroyWindow(now)
+    if DEBUGING:
+        now = datetime.datetime.now()
+        now = str(now)
+        cv2.imshow(now, image)
+        cv2.waitKey()
+        cv2.destroyWindow(now)
+    else:
+        pass
 
 
 def CvImageProcess(image):

@@ -4,14 +4,15 @@ from MyUtil import *
 # just fuck the code !!
 if __name__ == "__main__":
     pic_root_path = "./Pics/"
+    pic_dst_path = "./Pics/Dst/"
     pics_paths = GetImgPaths(pic_root_path)
-    pics_paths = [pic_root_path+i for i in pics_paths]
+    # pics_paths = [pic_root_path+i for i in pics_paths]
     
     for pic_path in pics_paths:
         print()
-        print(pic_path)
+        print(pic_root_path + pic_path)
 
-        image = cv2.imread(pic_path)
+        image = cv2.imread(pic_root_path + pic_path)
         image_area = image.shape[0]*image.shape[1]
 
         contours, hierachy = MyImageProcess(image)
@@ -42,7 +43,10 @@ if __name__ == "__main__":
             t_bound_rect = MyBoundingBox(cont)
             # print(t_bound_rect)
             t_area = t_bound_rect[2]*t_bound_rect[3]
-            t_wlrate = t_bound_rect[2]/t_bound_rect[3]
+            if t_bound_rect[3] != 0:
+                t_wlrate = t_bound_rect[2]/t_bound_rect[3]
+            else:
+                t_wlrate = t_bound_rect[2]
 
             if t_area > image_area/area_rate_thre \
                 or t_area < area_pixe_thre \
@@ -138,10 +142,10 @@ if __name__ == "__main__":
             continue
         
         print("showing result")
-        t_draw = np.zeros(image.shape, np.uint8) 
-        for idx in result_idxes: 
-            MyDrawContours(t_draw, contours[idx], np.array([0, 255, 0]))
-        SHOW_IMAGE(t_draw)
+        # t_draw = np.zeros(image.shape, np.uint8) 
+        # for idx in result_idxes: 
+        #     MyDrawContours(t_draw, contours[idx], np.array([0, 255, 0]))
+        # SHOW_IMAGE(t_draw)
 
         # 获得了三个定位点 
         # result_idxes = [hierachy[hierachy[j][3]][3] for j in result_idxes]  # 用最外面的轮廓
@@ -178,7 +182,7 @@ if __name__ == "__main__":
         MyDrawContours(t_draw, mid_out_cont, np.array([255, 0, 0]))
         MyDrawContours(t_draw, y_out_cont, np.array([0, 255, 0]))
         MyDrawContours(t_draw, x_out_cont, np.array([0, 0, 255]))
-        SHOW_IMAGE(t_draw)
+        # SHOW_IMAGE(t_draw)
         # continue
 
         # 对于定位区外轮廓，获得
@@ -202,14 +206,32 @@ if __name__ == "__main__":
             cv2.circle(t_draw, tuple(corner.astype(np.int16)), 10, color[c_idx])
         SHOW_IMAGE(t_draw)
 
-        qrc_width = 300
-        persp_trans = MyGetPerspTrans(all_corners, qrc_width)
-        # print(persp_trans)
+        # qrc_width = 300
+        # persp_trans = MyGetPerspTrans(all_corners, qrc_width)
+        # # print(persp_trans)
 
-        loss_corner_uv = np.array([300, 300, 1], dtype=np.float32)
-        persp_trans = np.matrix(persp_trans)
-        loss_corner_xy = persp_trans.dot(loss_corner_uv).astype(np.int16)
-        # print(loss_corner_xy)
+        # loss_corner_uv = np.array([300, 300, 1], dtype=np.float32)
+        # persp_trans = np.matrix(persp_trans)
+        # loss_corner_xy = persp_trans.dot(loss_corner_uv).astype(np.int16)
+        # # print(loss_corner_xy)
 
-        cv2.circle(image, (loss_corner_xy[0, 0], loss_corner_xy[0, 1]), 10, (255, 128, 128))
+        # cv2.circle(image, (loss_corner_xy[0, 0], loss_corner_xy[0, 1]), 10, (255, 128, 128))
+        # SHOW_IMAGE(image)
+
+        # 先放弃用透视变换
+        loss_corner = all_corners[6]+all_corners[9]-all_corners[0]
+        loss_corner = loss_corner.astype(np.int16)
+
+        # cv2.circle(image, (all_corners[0][0], all_corners[0][1]), 10, (255, 0, 0))
+        # cv2.circle(image, (all_corners[9][0], all_corners[9][1]), 10, (255, 0, 0))
+        # cv2.circle(image, (all_corners[6][0], all_corners[6][1]), 10, (255, 0, 0))
+        # cv2.circle(image, (loss_corner[0], loss_corner[1]), 10, (255, 0, 0))
+
+        cv2.line(image, (all_corners[0][0], all_corners[0][1]), (all_corners[9][0], all_corners[9][1]), (0, 0, 255), 3)
+        cv2.line(image, (loss_corner[0], loss_corner[1]), (all_corners[9][0], all_corners[9][1]), (0, 0, 255), 3)
+        cv2.line(image, (loss_corner[0], loss_corner[1]), (all_corners[6][0], all_corners[6][1]), (0, 0, 255), 3)
+        cv2.line(image, (all_corners[0][0], all_corners[0][1]), (all_corners[6][0], all_corners[6][1]), (0, 0, 255), 3)
         SHOW_IMAGE(image)
+        cv2.imwrite(pic_dst_path+pic_path, image)
+
+
