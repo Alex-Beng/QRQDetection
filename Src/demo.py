@@ -15,6 +15,7 @@ if __name__ == "__main__":
         image_area = image.shape[0]*image.shape[1]
 
         contours, hierachy = MyImageProcess(image)
+        del hierachy[0]
 
         #初始未筛选的轮廓
         t_draw = np.zeros(image.shape, np.uint8) 
@@ -32,7 +33,7 @@ if __name__ == "__main__":
 
         filted_once = []
         t_draw = np.zeros(image.shape, np.uint8) 
-        for cont_idx, cont in enumerate(contours[1:]):
+        for cont_idx, cont in enumerate(contours):
 
             if len(cont) < 50:
                 # print(cont)
@@ -63,27 +64,28 @@ if __name__ == "__main__":
         t_draw = np.zeros(image.shape, np.uint8)  
         for cont_idx, cont in filted_once:
             # 先康康有没有爸爸，没有爸爸肯定不是
-            if hierachy[cont_idx][0] == -1:
+            if hierachy[cont_idx][0] == 1:
                 continue
             
+            # print(hierachy[cont_idx], hierachy[hierachy[cont_idx][0]-2])
             self_peri = MyArcLen(cont)
-            fath_peri = MyArcLen(contours[hierachy[cont_idx][0]])
+            fath_peri = MyArcLen(contours[hierachy[cont_idx][0]-2])
             
-            t_d = np.zeros(image.shape, np.uint8)  
-            father_center = MyContourCenter(contours[hierachy[cont_idx][0]])
-            curr_center = MyContourCenter(contours[cont_idx])
-            father_center = (int(father_center[0]), int(father_center[1]))
-            curr_center = (int(curr_center[0]), int(curr_center[1]))
+            # t_d = np.zeros(image.shape, np.uint8)  
+            # father_center = MyContourCenter(contours[hierachy[cont_idx][0]-2])
+            # curr_center = MyContourCenter(contours[cont_idx])
+            # father_center = (int(father_center[1]), int(father_center[0]))
+            # curr_center = (int(curr_center[1]), int(curr_center[0]))
             
-            MyDrawContours(t_d, contours[cont_idx], np.array([255, 0, 0]))
-            MyDrawContours(t_d, contours[hierachy[cont_idx][0]], np.array([255, 255, 0]))
-            cv2.circle(t_d, father_center, 50, (255, 0, 0))
-            cv2.circle(t_d, curr_center, 50, (255, 255, 0))
-            SHOW_IMAGE(t_d)
+            # MyDrawContours(t_d, contours[cont_idx], np.array([255, 0, 0]))
+            # MyDrawContours(t_d, contours[hierachy[cont_idx][0]-2], np.array([255, 255, 0]))
+            # cv2.circle(t_d, father_center, 50, (255, 255, 0))
+            # cv2.circle(t_d, curr_center, 50, (255, 0, 0))
+            # SHOW_IMAGE(t_d)
 
 
             if fath_peri/self_peri < 2 \
-                and hierachy[cont_idx][1] == -1 and MyNest(cont_idx, contours, hierachy, 1):
+                and hierachy[cont_idx][1] == -1 and MyNest(cont_idx, contours, hierachy, 2):
                 # and hierachy[cont_idx][1] == -1 :
                 
                 # cv2.drawContours(t_draw, cont, -1, (0,255,0), 1)
@@ -97,7 +99,6 @@ if __name__ == "__main__":
         print("twice num: %d"%len(filted_twice))
         SHOW_IMAGE(t_draw)
 
-        break
 
         result_idxes = []
         t_draw = np.zeros(image.shape, np.uint8)  
@@ -106,42 +107,53 @@ if __name__ == "__main__":
             filted_third = []
             # 用爷爷轮廓关系再筛一次
             for cont_idx, cont in filted_twice:
-                if hierachy[hierachy[cont_idx][3]][3] == -1:
+                if hierachy[ hierachy[cont_idx][0]-2 ][0] == 1:
                     continue
-                self_peri = cv2.arcLength(cont, True)
-                graf_peri = cv2.arcLength(contours[hierachy[hierachy[cont_idx][3]][3]], True)
+                self_peri = MyArcLen(cont)
+                graf_peri = MyArcLen(contours[
+                    hierachy[ hierachy[cont_idx][0]-2 ][0]-2
+                    ])
                 if graf_peri/self_peri > 3 \
                     or graf_peri/self_peri < 2:
                     continue
                 else:
                     filted_third.append((cont_idx, cont))
-                    cv2.drawContours(t_draw, cont, -1, (0,255,0), 1)
+                    MyDrawContours(t_draw, cont, np.array([0, 255, 0]))
             SHOW_IMAGE(t_draw)
 
             # 还是大于三个那几暴力回最大三个
             if len(filted_third) > 3:
-                bound_boxes = [(j[0], cv2.boundingRect(j[1])) for j in filted_third]
+                bound_boxes = [(j[0], MyBoundingBox(j[1])) for j in filted_third]
                 bound_boxes = sorted(bound_boxes, key=lambda j: j[1][2]*j[1][3], reverse=True)[:3]
                 result_idxes = [j[0] for j in bound_boxes]
             elif len(filted_third) == 3:
                 result_idxes = [j[0] for j in filted_third]
             else: 
-                print("yaya，不足三个定位点")    
+                print("yaya，不足三个定位点")
+                continue
         elif len(filted_twice) == 3:
             result_idxes = [j[0] for j in filted_twice]
         else:
             print("yayaya，不足三个定位点")
+            continue
         
         print("showing result")
         t_draw = np.zeros(image.shape, np.uint8) 
         for idx in result_idxes: 
-            cv2.drawContours(t_draw,  contours[idx], -1, (0,255,0), 1)
+            MyDrawContours(t_draw, contours[idx], np.array([0, 255, 0]))
         SHOW_IMAGE(t_draw)
 
         # 获得了三个定位点 
         # result_idxes = [hierachy[hierachy[j][3]][3] for j in result_idxes]  # 用最外面的轮廓
-        cont_points = [contours[j].reshape(-1, 2) for j in result_idxes]   
+        cont_points = [contours[j] for j in result_idxes]   
         points = [MyContourCenter(contours[j]) for j in result_idxes]
+        for point in points:
+            # point = np.array(point[::-1])
+            cv2.circle(image, tuple(point.astype(np.int16)), 50, (0, 0, 255))
+
+        
+        SHOW_IMAGE(image)
+        continue
         angles = MyVecAngles(points)
 
         mid_pnt_idx = angles.index(max(angles))
@@ -156,8 +168,8 @@ if __name__ == "__main__":
         y_vec = points[y_pnt_idx]-points[mid_pnt_idx]
 
         # 三个定位区的最外轮廓
-        out_cont_idxes = [hierachy[hierachy[j][3]][3] for j in result_idxes]
-        out_conts = [contours[j].reshape(-1, 2) for j in out_cont_idxes]
+        out_cont_idxes = [hierachy[ hierachy[j][0]-2 ][0]-2 for j in result_idxes]
+        out_conts = [contours[j] for j in out_cont_idxes]
         
         # 首先搞qrcode左上点
         mid_out_cont = out_conts[mid_pnt_idx]
@@ -167,6 +179,8 @@ if __name__ == "__main__":
         t = 10000
         qr_cor_1 = None
         for point in mid_out_cont:
+            # point = np.array(point[::-1])
+            # print(type(point))
             t_cor = MyGetCor(x_vec, y_vec, point-points[mid_pnt_idx]) 
             if np.sum(t_cor) < t:
                 t = np.sum(t_cor)
@@ -174,9 +188,9 @@ if __name__ == "__main__":
             # print(t_cor)
 
         # qr_cor_1 = tuple(qr_cor_1.astype(np.int16))
-        cv2.circle(image, tuple(qr_cor_1.astype(np.int16)), 10, (255, 0, 0))
+        cv2.circle(image, tuple(qr_cor_1), 10, (255, 0, 0))
         print("qr code cor1")
-        # SHOW_IMAGE(image)            
+        SHOW_IMAGE(image)            
 
         # 搞qrcode 2点
         qr_cor_2 = None
@@ -184,15 +198,16 @@ if __name__ == "__main__":
 
         t = -10000
         for point in y_out_cont:
+            point = np.array(point[::-1])
             t_cor = MyGetCor(x_vec, y_vec, point-points[mid_pnt_idx])
             if (t_cor[1]-qr_cor_1[1])-(t_cor[0]-qr_cor_1[0]) > t:
                 t = (t_cor[1]-qr_cor_1[1])-(t_cor[0]-qr_cor_1[0])
                 qr_cor_2 = point
-        print(qr_cor_2)
+        # print(qr_cor_2)
         # qr_cor_2 = tuple(qr_cor_2.astype(np.int16))
-        cv2.circle(image, tuple(qr_cor_2.astype(np.int16)), 10, (255, 0, 0))
+        cv2.circle(image, tuple(qr_cor_2), 10, (255, 0, 0))
         print("qr code cor2")
-        # SHOW_IMAGE(image)
+        SHOW_IMAGE(image)
 
         # 搞qrcode 3点
         qr_cor_3 = None

@@ -49,7 +49,7 @@ def MyContourCenter(contour):
         sum_y += pnt[1]
     sum_x /= len(contour)
     sum_y /= len(contour)
-    return (sum_x, sum_y)
+    return np.array([sum_y, sum_x])
 
 def MyNest(cont_idx, contours, hierachy, check_layer):
     if check_layer == 1:
@@ -59,7 +59,7 @@ def MyNest(cont_idx, contours, hierachy, check_layer):
             return False
     elif check_layer > 1:
         if hierachy[cont_idx][0] != -1:            
-            father_center = MyContourCenter(contours[hierachy[cont_idx][0]])
+            father_center = MyContourCenter(contours[hierachy[cont_idx][0]-2])
             curr_center = MyContourCenter(contours[cont_idx])
             father_center = np.array(father_center).reshape(-1,)
             curr_center = np.array(curr_center).reshape(-1,)
