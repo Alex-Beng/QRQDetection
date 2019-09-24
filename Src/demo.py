@@ -3,8 +3,8 @@ from MyUtil import *
 
 # just fuck the code !!
 if __name__ == "__main__":
-    pic_root_path = "./Pics/"
-    pic_dst_path = "./Pics/Dst/"
+    pic_root_path = "../Pics/"
+    pic_dst_path = "../Pics/Dst/"
     pics_paths = GetImgPaths(pic_root_path)
     # pics_paths = [pic_root_path+i for i in pics_paths]
     
@@ -141,7 +141,7 @@ if __name__ == "__main__":
             print("yayaya，不足三个定位点")
             continue
         
-        print("showing result")
+        print("showing detection result")
         # t_draw = np.zeros(image.shape, np.uint8) 
         # for idx in result_idxes: 
         #     MyDrawContours(t_draw, contours[idx], np.array([0, 255, 0]))
@@ -206,6 +206,7 @@ if __name__ == "__main__":
             cv2.circle(t_draw, tuple(corner.astype(np.int16)), 10, color[c_idx])
         SHOW_IMAGE(t_draw)
 
+        # 透视变换求
         # qrc_width = 300
         # persp_trans = MyGetPerspTrans(all_corners, qrc_width)
         # # print(persp_trans)
@@ -218,11 +219,26 @@ if __name__ == "__main__":
         # cv2.circle(image, (loss_corner_xy[0, 0], loss_corner_xy[0, 1]), 10, (255, 128, 128))
         # SHOW_IMAGE(image)
 
-        # 先放弃用透视变换
-        loss_corner = all_corners[6]+all_corners[9]-all_corners[0]
-        loss_corner = loss_corner.astype(np.int16)
+        # 直接莽平行四边形
+        # loss_corner = all_corners[6]+all_corners[9]-all_corners[0]
+        # loss_corner = loss_corner.astype(np.int16)
 
-        # cv2.circle(image, (all_corners[0][0], all_corners[0][1]), 10, (255, 0, 0))
+
+        # 利用交点求
+
+        a0, b0, c0 = MySolveLine((all_corners[6][0], all_corners[6][1]), (all_corners[7][0], all_corners[7][1]))
+        a1, b1, c1 = MySolveLine((all_corners[9][0], all_corners[9][1]), (all_corners[11][0], all_corners[11][1]))
+
+        D = a0*b1 - a1*b0
+        x = (b0*c1 - b1*c0)/D
+        y = (a1*c0 - a0*c1)/D
+
+        loss_corner = (int(x), int(y))
+        all_corners.append(np.array([x, y], dtype=np.int16))
+        print(all_corners)
+        # print(loss_corner)
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              # cv2.circle(image, (all_corners[0][0], all_corners[0][1]), 10, (255, 0, 0))
         # cv2.circle(image, (all_corners[9][0], all_corners[9][1]), 10, (255, 0, 0))
         # cv2.circle(image, (all_corners[6][0], all_corners[6][1]), 10, (255, 0, 0))
         # cv2.circle(image, (loss_corner[0], loss_corner[1]), 10, (255, 0, 0))
@@ -232,6 +248,15 @@ if __name__ == "__main__":
         cv2.line(image, (loss_corner[0], loss_corner[1]), (all_corners[6][0], all_corners[6][1]), (0, 0, 255), 3)
         cv2.line(image, (all_corners[0][0], all_corners[0][1]), (all_corners[6][0], all_corners[6][1]), (0, 0, 255), 3)
         SHOW_IMAGE(image)
-        cv2.imwrite(pic_dst_path+pic_path, image)
+        if not DEBUGING:
+            cv2.imwrite(pic_dst_path+pic_path, image)
 
+        # 2 decode part
 
+        # 2.1 获得透视变换矩阵
+        qrcode_width = 300
+        persp_trans = MyGetPerspTrans(all_corners, qrcode_width)
+        # print(persp_trans)
+
+        # 2.2 通过H矩阵获得Scale
+        

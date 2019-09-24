@@ -5,7 +5,7 @@ import numpy as np
 from math import *
 
 DEBUGING = True
-DEBUGING = False
+# DEBUGING = False
 
 def SHOW_IMAGE(image):
     if DEBUGING:
