@@ -15,8 +15,9 @@ if __name__ == "__main__":
         image = cv2.imread(pic_root_path + pic_path)
         image_area = image.shape[0]*image.shape[1]
 
-        contours, hierachy = MyImageProcess(image)
+        contours, hierachy, binary_image = MyImageProcess(image)
         del hierachy[0]
+        SHOW_IMAGE(binary_image)
 
         #初始未筛选的轮廓
         t_draw = np.zeros(image.shape, np.uint8) 
@@ -197,13 +198,16 @@ if __name__ == "__main__":
         for c_idx, corner in enumerate(mid_out_cont_corners):
             all_corners.append(corner)
             cv2.circle(t_draw, tuple(corner.astype(np.int16)), 10, color[c_idx])
+            cv2.circle(image, tuple(corner.astype(np.int16)), 3, color[c_idx])
             # SHOW_IMAGE(t_draw)
         for c_idx, corner in enumerate(y_out_cont_corners):
             all_corners.append(corner)
             cv2.circle(t_draw, tuple(corner.astype(np.int16)), 10, color[c_idx])
+            cv2.circle(image, tuple(corner.astype(np.int16)), 3, color[c_idx])
         for c_idx, corner in enumerate(x_out_cont_corners):
             all_corners.append(corner)
             cv2.circle(t_draw, tuple(corner.astype(np.int16)), 10, color[c_idx])
+            cv2.circle(image, tuple(corner.astype(np.int16)), 3, color[c_idx])
         SHOW_IMAGE(t_draw)
 
         # 透视变换求
@@ -235,7 +239,7 @@ if __name__ == "__main__":
 
         loss_corner = (int(x), int(y))
         all_corners.append(np.array([x, y], dtype=np.int16))
-        print(all_corners)
+        # print(all_corners)
         # print(loss_corner)
 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               # cv2.circle(image, (all_corners[0][0], all_corners[0][1]), 10, (255, 0, 0))
@@ -243,10 +247,10 @@ if __name__ == "__main__":
         # cv2.circle(image, (all_corners[6][0], all_corners[6][1]), 10, (255, 0, 0))
         # cv2.circle(image, (loss_corner[0], loss_corner[1]), 10, (255, 0, 0))
 
-        cv2.line(image, (all_corners[0][0], all_corners[0][1]), (all_corners[9][0], all_corners[9][1]), (0, 0, 255), 3)
-        cv2.line(image, (loss_corner[0], loss_corner[1]), (all_corners[9][0], all_corners[9][1]), (0, 0, 255), 3)
-        cv2.line(image, (loss_corner[0], loss_corner[1]), (all_corners[6][0], all_corners[6][1]), (0, 0, 255), 3)
-        cv2.line(image, (all_corners[0][0], all_corners[0][1]), (all_corners[6][0], all_corners[6][1]), (0, 0, 255), 3)
+        cv2.line(image, (all_corners[0][0], all_corners[0][1]), (all_corners[9][0], all_corners[9][1]), (0, 0, 255), 1)
+        cv2.line(image, (loss_corner[0], loss_corner[1]), (all_corners[9][0], all_corners[9][1]), (0, 0, 255), 1)
+        cv2.line(image, (loss_corner[0], loss_corner[1]), (all_corners[6][0], all_corners[6][1]), (0, 0, 255), 1)
+        cv2.line(image, (all_corners[0][0], all_corners[0][1]), (all_corners[6][0], all_corners[6][1]), (0, 0, 255), 1)
         SHOW_IMAGE(image)
         if not DEBUGING:
             cv2.imwrite(pic_dst_path+pic_path, image)
@@ -254,9 +258,45 @@ if __name__ == "__main__":
         # 2 decode part
 
         # 2.1 获得透视变换矩阵
-        qrcode_width = 300
-        persp_trans = MyGetPerspTrans(all_corners, qrcode_width)
+        qrcode_width = 600
+        persp_trans = MyGetPerspTrans(all_corners, qrcode_width, MY_PERSP_TRANS_XY2UV)
+        re_persp_trans = MyGetPerspTrans(all_corners, qrcode_width, MY_PERSP_TRANS_UV2XY)
+
         # print(persp_trans)
 
         # 2.2 通过H矩阵获得Scale
+        # MyGetQrScale(all_corners, persp_trans)
+        # bit_per_width = MyGetQrScale(all_corners, re_persp_trans)
+        # bit_rect_width = qrcode_width//bit_per_width
+        # recon_qrcode_image = np.zeros((qrcode_width, qrcode_width, 3), dtype=np.uint8)
+
+        # print(bit_per_width, bit_rect_width)
+        # t_draw = copy.deepcopy(image)
+        # MyDecodeRecon(binary_image, recon_qrcode_image, persp_trans, bit_per_width, bit_rect_width, t_draw)
+
+
         
+        # 康一下opencv的效果，以及对比
+        # pts1 = [
+        #     all_corners[0],
+        #     all_corners[6],
+        #     all_corners[9],
+        #     all_corners[12]
+        # ]
+        # pts1 = np.array(pts1, dtype=np.float32).reshape(-1, 2)
+        # pts2 = [
+        #     np.array([0, 0]), 
+        #     np.array([0, qrcode_width]), 
+        #     np.array([qrcode_width, 0]), 
+        #     np.array([qrcode_width, qrcode_width])
+        # ]
+        # pts2 = np.array(pts2, dtype=np.float32).reshape(-1, 2)
+        # cv_persp_trans = cv2.getPerspectiveTransform(pts1, pts2)
+        # dst = cv2.warpPerspective(image, cv_persp_trans, (qrcode_width, qrcode_width))
+        # SHOW_IMAGE(dst)
+
+        # dst = cv2.warpPerspective(image, re_persp_trans, (qrcode_width, qrcode_width))
+        # SHOW_IMAGE(dst)
+
+        # dst = cv2.warpPerspective(image, persp_trans.I, (qrcode_width, qrcode_width))
+        # SHOW_IMAGE(dst)

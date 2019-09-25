@@ -2,9 +2,16 @@ import os
 import cv2
 import datetime
 import numpy as np
+import numba
+from math import *
 from Cv2Util import *
 from Contours import *
 
+# params
+MY_PERSP_TRANS_XY2UV = 0
+MY_PERSP_TRANS_UV2XY = 1
+
+@numba.jit
 def GetImgPaths(folder_path):
     paths = []
     for fpathe,dirs,fs in os.walk(folder_path):
@@ -33,7 +40,7 @@ def MyArcLen(contour):
     #         curve_len += 1.0
 
         
-
+@numba.jit
 def MyDrawContours(image, contour,delta_value):
     delta_value = delta_value.astype(np.uint8)
     for pnt in contour:
@@ -41,6 +48,7 @@ def MyDrawContours(image, contour,delta_value):
 
 # 因为是二值图，所以Fij == 0/1
 # 可简化计算
+@numba.jit
 def MyContourCenter(contour):
     sum_x = 0
     sum_y = 0
@@ -69,6 +77,7 @@ def MyNest(cont_idx, contours, hierachy, check_layer):
                 return MyNest(hierachy[cont_idx][0], contours, hierachy, check_layer-1)
     return False
 
+@numba.jit
 def MyVecAngles(points):
     vecs = [ [j-points[(i+1)%3], j-points[(i+2)%3]] for i,j in enumerate(points)]
     angles = []
@@ -106,6 +115,7 @@ def MyGetCor(x0, y0, z):
 
 
 # 只求L通道，可简化计算
+@numba.jit
 def MyBgr2L(src):
     dst = np.zeros((src.shape[0], src.shape[1]), dtype=np.float32)
     T = np.array(
@@ -128,6 +138,7 @@ def MyBgr2L(src):
                 dst[r, c] = 0 
     return dst
 
+@numba.jit
 def MyIntegralImage(image):
     numrows = image.shape[0]
     numcols = image.shape[1]
@@ -143,6 +154,7 @@ def MyIntegralImage(image):
                 int_image[r, c] = int_image[r-1, c] + row_sum
     return int_image
 
+@numba.jit
 def MyadaptiveThreshold(image, block_size, thre_c):
     numrows = image.shape[0]
     numcols = image.shape[1]
@@ -189,13 +201,13 @@ def MyImageProcess(image):
     thre_c = -1
 
     l_thre = MyadaptiveThreshold(l_chn, block_size, thre_c)
-    SHOW_IMAGE(l_thre)
 
     contours, hierachy = FindContours(l_thre)
 
-    return contours, hierachy
+    return contours, hierachy, l_thre
 
 # contour is (row col) rather than (x, y)
+@numba.jit
 def MyLocalCor(x_vec, y_vec, origin, contour):
     corners = [233]*4
 
@@ -223,7 +235,8 @@ def MyLocalCor(x_vec, y_vec, origin, contour):
             y_sub_x_max = y-x
     return corners
 
-def MyGetPerspTrans(all_corners, imagine_width):
+@numba.jit
+def MyGetPerspTrans(all_corners, imagine_width, mode):
     # 四个对应点
     imagine_corners = [
         np.array([0, 0]), 
@@ -244,6 +257,8 @@ def MyGetPerspTrans(all_corners, imagine_width):
     A = []
     B = []
     for xy, uv in zip(imagine_corners, pixel_corners):
+        if mode == MY_PERSP_TRANS_UV2XY:
+            uv, xy = xy, uv
         u = uv[0]
         v = uv[1]
         x = xy[0]
@@ -285,7 +300,6 @@ def MyGetPerspTrans(all_corners, imagine_width):
 #         delta.append(refer_corners[i] - refer_corners[0])
 #     scale = [delta[] for i in range(2)]
 
-
 def MySolveLine(point1, point2):
     x0 = point1[0]
     y0 = point1[1]
@@ -293,3 +307,99 @@ def MySolveLine(point1, point2):
     y1 = point2[1]
     return y0-y1, x1-x0, x0*y1-x1*y0
 
+def MyGetQrScale(all_corners, pers_trans):
+    # if flag:
+    #     re_pers_trans = pers_trans.I
+    # else:
+    #     re_pers_trans = pers_trans
+    uv_homo_cors = [
+        np.array([i[0], i[1], 1]).reshape(-1, 1) for i in all_corners
+    ]
+    pixel_corners = [pers_trans.dot(i) for i in uv_homo_cors]
+    # print(len(pixel_corners))
+    # for i in pixel_corners:
+    #     print(i, i.shape)
+        # if flag:
+        #     cv2.circle(t_draw, (int(i[0, 0])+10, int(i[1, 0])+10), 3, (255, 0, 0))
+        # else:
+        #     cv2.circle(t_draw, (int(i[0, 0])+10, int(i[1, 0])+10), 3, (0, 0, 255))
+    rect_len_avg = 0
+    for i in range(0, 9, 4):
+        pixel_corners[i][0, 0]
+        pixel_corners[i][1, 0]
+        rect_len_avg += sqrt( 
+            (pixel_corners[i][0, 0] - pixel_corners[i+1][0, 0])**2 + 
+            (pixel_corners[i][1, 0] - pixel_corners[i+1][1, 0])**2
+        )
+        rect_len_avg += sqrt( 
+            (pixel_corners[i][0, 0] - pixel_corners[i+2][0, 0])**2 + 
+            (pixel_corners[i][1, 0] - pixel_corners[i+2][1, 0])**2
+        )
+        rect_len_avg += sqrt( 
+            (pixel_corners[i+3][0, 0] - pixel_corners[i+2][0, 0])**2 + 
+            (pixel_corners[i+3][1, 0] - pixel_corners[i+2][1, 0])**2
+        )
+        rect_len_avg += sqrt( 
+            (pixel_corners[i+3][0, 0] - pixel_corners[i+1][0, 0])**2 + 
+            (pixel_corners[i+3][1, 0] - pixel_corners[i+1][1, 0])**2
+        )
+    rect_len_avg /= 12
+
+    code_len_avg = 0
+    code_len_avg += sqrt( 
+        (pixel_corners[0][0, 0] - pixel_corners[9][0, 0])**2 + 
+        (pixel_corners[0][1, 0] - pixel_corners[9][1, 0])**2
+    )
+    code_len_avg += sqrt( 
+        (pixel_corners[0][0, 0] - pixel_corners[6][0, 0])**2 + 
+        (pixel_corners[0][1, 0] - pixel_corners[6][1, 0])**2
+    )
+    code_len_avg += sqrt( 
+        (pixel_corners[6][0, 0] - pixel_corners[12][0, 0])**2 + 
+        (pixel_corners[6][1, 0] - pixel_corners[12][1, 0])**2
+    )
+    code_len_avg += sqrt( 
+        (pixel_corners[9][0, 0] - pixel_corners[12][0, 0])**2 + 
+        (pixel_corners[9][1, 0] - pixel_corners[12][1, 0])**2
+    )
+    code_len_avg /= 4
+
+    # print(rect_len_avg, code_len_avg, 7*code_len_avg/rect_len_avg) 
+    width = 7*code_len_avg/rect_len_avg
+    width = int(width+0.5)
+    if width%2 == 0:
+        return width+1
+    else:
+        return width
+
+@numba.jit
+def MyFillRect(image, rect, color):
+    for r in range(rect[2]):
+        for c in range(rect[3]):
+            image[rect[0]+r, rect[1]+c] = color
+
+# 解码与重构二维码
+@numba.jit
+def MyDecodeRecon(bin_image, recon_image, xy2uv_h, bit_per_width, bit_rect_width, image):
+    half_rect_width = bit_rect_width//2
+    for r in range(bit_per_width):
+        for c in range(bit_per_width):
+            # 采样样
+            rc_cor = (
+                r*bit_rect_width+half_rect_width, 
+                c*bit_rect_width+half_rect_width
+            )
+            xy_homo_cor = np.array(
+                [rc_cor[1], rc_cor[0], 1], dtype=np.float32
+            )
+            uv_homo_cor = xy2uv_h.dot(xy_homo_cor)
+            # print(uv_homo_cor.shape, uv_homo_cor)
+            cv2.circle(image, (int(uv_homo_cor[0, 0]+0.5), int(uv_homo_cor[0, 1]+0.5)), 5, (0, 0, 255))
+            # print(uv_homo_cor)
+            if bin_image[int(uv_homo_cor[0, 0]+0.5), int(uv_homo_cor[0, 1]+0.5)] == 0:
+                continue
+            else:
+                MyFillRect(recon_image, (r*bit_rect_width, c*bit_rect_width, bit_rect_width, bit_rect_width), 255)
+            # recon_image[uv_homo_cor[0, 0], uv_homo_cor[0, 1]] = 255
+        SHOW_IMAGE(image)
+        SHOW_IMAGE(recon_image)

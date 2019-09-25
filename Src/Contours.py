@@ -1,10 +1,12 @@
 import numpy as np
 import copy
+import numba
 
 HOLE_BORDER = 1
 OUTER_BORDER = 2
 
 # 点是否还在图片里
+@numba.jit
 def CorInImage(p, numrows, numcols):
     if p[1] < 0 \
         or p[0] < 0 \
@@ -15,6 +17,7 @@ def CorInImage(p, numrows, numcols):
         return True
 
 # 顺时钟冲一发
+@numba.jit
 def GoClockwise(current, pivot):
     if current[1] > pivot[1]:
         return (pivot[0]-1, pivot[1])
@@ -24,7 +27,7 @@ def GoClockwise(current, pivot):
         return (pivot[0], pivot[1]+1)
     elif current[0] < pivot[0]:
         return (pivot[0], pivot[1]-1)
-
+@numba.jit
 def GoCounterColokwise(current, pivot):
     if current[1] > pivot[1]:
         return (pivot[0]+1, pivot[1])
@@ -36,6 +39,7 @@ def GoCounterColokwise(current, pivot):
         return (pivot[0], pivot[1]+1)
 
 # 一边冲一边标记
+@numba.jit
 def MarkPath(mark, center, checked):
     loc = -1
     #     3
@@ -56,6 +60,7 @@ def MarkPath(mark, center, checked):
     
 
 # 边界跟踪
+@numba.jit
 def FollowBorder(image, row, col, p2, NBD, contours):
     numrows = image.shape[0]
     numcols = image.shape[1]
@@ -115,6 +120,7 @@ def FollowBorder(image, row, col, p2, NBD, contours):
 
 
 # suzuki 算法
+@numba.jit
 def FindContours(image):
     if np.max(image) > 1:
         image = image/255
