@@ -419,6 +419,7 @@ def MyDecodeRecon(bin_image, recon_image, xy2uv_h, bit_per_width, bit_rect_width
             # recon_image[uv_homo_cor[0, 0], uv_homo_cor[0, 1]] = 255
         SHOW_IMAGE(image)
         SHOW_IMAGE(recon_image)
+
 # 双线性插值, ins_x, ins_y为要插入的点
 def MyBilinearInter(src_image:np.ndarray, ins_x:float, ins_y:float)->float:
     x1, x2 = int(ins_x), int(ins_x)+1
@@ -427,18 +428,63 @@ def MyBilinearInter(src_image:np.ndarray, ins_x:float, ins_y:float)->float:
     return H1[0]*(y2 - ins_y) + H1[1]*(ins_y - y1)
 
 
-@numba.jit
-def MyWarpPerspective(src_image:np.ndarray, homo_matrix:np.ndarray, dst_size)->np.ndarray:
-    dst_image = np.zeros(dst_size, dtype=np.float32)
-    rows = dst_image.shape[0]
-    cols = dst_image.shape[1]
-    for r in range(rows):
-        for c in range(cols):
-            xy_homo_cor = np.array([c, r, 1], dtype=np.float32).reshape(-1, 1)
-            # 注意不能直接用算出来的uv，因为还有齐次项1/Z
-            uv_homo_cor = homo_matrix.dot(xy_homo_cor)
-            W = 0.0
-            if uv_homo_cor[2, 0] != 0:
-                W = 1 / uv_homo_cor[2, 0]
-            dst_image[r, c] = MyBilinearInter(src_image, uv_homo_cor[0, 0]/W, uv_homo_cor[1, 0]/W)
+# 重写一个getPerspective + WarpPerspective二合一函数
+# 接受点为参数，返回校正后图
+def MyPerspective2in1(src_image, src_dots, dst_dots, dst_width):
+    d1, d2, d3, d4 = src_dots
+    x1, x2, x3, x4 = d1[0], d2[0], d3[0], d4[0]
+    y1, y2, y3, y4 = d1[1], d2[1], d3[1], d4[1]
+
+    t1, t2, t3, t4 = dst_dots
+    rx1, rx2, rx3, rx4 = t1[1], t2[1], t3[1], t4[1]
+    ry1, ry2, ry3, ry4 = t1[0], t2[0], t3[0], t4[0]
+
+    m = np.array([
+                  [y1, x1, 1, 0, 0, 0, -ry1 * y1, -ry1 * x1],
+                  [0, 0, 0, y1, x1, 1, -rx1 * y1, -rx1 * x1],
+                  [y2, x2, 1, 0, 0, 0, -ry2 * y2, -ry2 * x2],
+                  [0, 0, 0, y2, x2, 1, -rx2 * y2, -rx2 * x2],
+                  [y3, x3, 1, 0, 0, 0, -ry3 * y3, -ry3 * x3],
+                  [0, 0, 0, y3, x3, 1, -rx3 * y3, -rx3 * x3],
+                  [y4, x4, 1, 0, 0, 0, -ry4 * y4, -ry4 * x4],
+                  [0, 0, 0, y4, x4, 1, -rx4 * y4, -rx4 * x4],
+                ])
+
+    vectorSrc = np.array([ry1, rx1, ry2, rx2, ry3, rx3, ry4, rx4])
+    vectorSrc.shape = (1, 8)
+    HFlat = np.dot(np.linalg.inv(m), np.transpose(vectorSrc))
+    a, b, c, d, e, f, g, h = HFlat[0, 0],HFlat[1, 0],HFlat[2, 0],HFlat[3, 0],HFlat[4, 0],HFlat[5, 0],HFlat[6, 0],HFlat[7, 0]
+
+    H = np.array([[a, b, c],
+                  [d, e, f],
+                  [g, h, 1]], dtype=np.float32)
+    
+    minX = 0
+    maxX = dst_width
+    minY = 0
+    maxY = dst_width
+
+    vtr = np.empty((0,3),dtype=np.float32) # 对应的是我的xy平面上的点
+    for i in range(minY, maxY):
+        arr1 = np.arange(minX, maxX)
+        arr2 = np.ones(maxX - minX)
+        vt1 = np.stack((arr2*i, arr1 , arr2), axis=-1)
+        vtr = np.concatenate((vtr, vt1), axis=0)
+    vts = np.dot(vtr,np.linalg.inv(np.transpose(H))) # 这个对应的是uv平面的齐次坐标，但是除了Z
+    dstHeight, dstWidth = maxY - minY + 1, maxX - minX + 1
+    dst_image = np.zeros((dstHeight, dstWidth), dtype=src_image.dtype)
+
+    for (r, s) in zip(vtr, vts):
+        ry, rx = int(r[0]), int(r[1])
+        iy, ix = s[:2]
+        TH = np.linalg.inv(np.array([[iy * g - 1, iy * h],
+                                     [ix * g, ix * h - 1]]))
+
+        vxy = np.dot(TH, np.array([[-iy], [-ix]]))
+        sy, sx = vxy[0, 0], vxy[1, 0]
+
+        t_value = MyBilinearInter(src_image, sx, sy)
+        dst_image[ry, rx] = t_value
+
     return dst_image
+

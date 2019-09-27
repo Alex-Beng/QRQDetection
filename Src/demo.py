@@ -265,40 +265,40 @@ if __name__ == "__main__":
 
         # print(persp_trans)
         
-        # 使用双线性插值获得解码图
-        dst_image = MyWarpPerspective(binary_image, persp_trans, (qrcode_width, qrcode_width))
-        # dst_image = cv2.warpPerspective(binary_image, re_persp_trans, (qrcode_width, qrcode_width))
-        print("showing decoded result")
-        SHOW_IMAGE(dst_image.astype(np.uint8))
-        if not DEBUGING:
-            cv2.imwrite(pic_decod_dst_path+pic_path, dst_image)
-            print(pic_decod_dst_path+pic_path)
-        
-        # 康一下opencv的效果，以及对比
         pts1 = [
             all_corners[0],
             all_corners[6],
             all_corners[9],
             all_corners[12]
         ]
-        pts1 = np.array(pts1, dtype=np.float32).reshape(-1, 2)
         pts2 = [
             np.array([0, 0]), 
             np.array([0, qrcode_width]), 
             np.array([qrcode_width, 0]), 
             np.array([qrcode_width, qrcode_width])
         ]
-        # print(pts1, pts2)
-        pts2 = np.array(pts2, dtype=np.float32).reshape(-1, 2)
-        cv_persp_trans = cv2.getPerspectiveTransform(pts1, pts2)
-        print(persp_trans-cv_persp_trans)
-
-        dst = cv2.warpPerspective(binary_image, cv_persp_trans, (qrcode_width, qrcode_width))
-        print("showing cv's pers result")
-        SHOW_IMAGE(dst)
+        # 试试二合一
+        dst_image = MyPerspective2in1(binary_image, pts1, pts2, qrcode_width)
+        print("showing decoded result")
+        SHOW_IMAGE(dst_image)
         if not DEBUGING:
-            cv2.imwrite(pic_decod_dst_path+'cv_'+pic_path, dst)
-            print(pic_decod_dst_path+'cv_'+pic_path)
+            cv2.imwrite(pic_decod_dst_path+pic_path, dst_image)
+            print(pic_decod_dst_path+pic_path)
+        
+
+        # 康一下opencv的效果，以及对比
+        # print(pts1, pts2)
+        # pts1 = np.array(pts1, dtype=np.float32).reshape(-1, 2)
+        # pts2 = np.array(pts2, dtype=np.float32).reshape(-1, 2)
+        # cv_persp_trans = cv2.getPerspectiveTransform(pts1, pts2)
+        # print(persp_trans-cv_persp_trans)
+
+        # dst = cv2.warpPerspective(binary_image, cv_persp_trans, (qrcode_width, qrcode_width))
+        # print("showing cv's pers result")
+        # SHOW_IMAGE(dst)
+        # if not DEBUGING:
+        #     cv2.imwrite(pic_decod_dst_path+'cv_'+pic_path, dst)
+        #     print(pic_decod_dst_path+'cv_'+pic_path)
         
 
         # dst = cv2.warpPerspective(image, re_persp_trans, (qrcode_width, qrcode_width))
