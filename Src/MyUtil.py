@@ -429,7 +429,7 @@ def MyBilinearInter(src_image:np.ndarray, ins_x:float, ins_y:float)->float:
 
 
 # 重写一个getPerspective + WarpPerspective二合一函数
-# 接受点为参数，返回校正后图
+# 接受点为参数，返回校正后图&变换矩阵
 def MyPerspective2in1(src_image, src_dots, dst_dots, dst_width):
     d1, d2, d3, d4 = src_dots
     x1, x2, x3, x4 = d1[0], d2[0], d3[0], d4[0]
@@ -486,5 +486,28 @@ def MyPerspective2in1(src_image, src_dots, dst_dots, dst_width):
         t_value = MyBilinearInter(src_image, sx, sy)
         dst_image[ry, rx] = t_value
 
-    return dst_image
+    return dst_image, H
 
+
+def MyWrapPerspectiveOnPoints(src_pts, homo_mat):
+    dst_pts = []
+    
+    g = np.linalg.inv(homo_mat)[2, 0]
+    h = np.linalg.inv(homo_mat)[2, 1]
+    for pnt in src_pts:
+        x, y = pnt[0], pnt[1]
+        r = np.array([y, x, 1])
+        s = np.dot(homo_mat, r)
+        iy, ix = s[:2]
+        t_A = np.array([
+            [iy*g-1, iy*h],
+            [ix*g, ix*h-1]
+        ])
+        t_B = np.array([
+            [-iy],
+            [-ix]
+        ])
+        vxy  = np.dot(np.linalg.inv(t_A), t_B)
+        sy, sx = vxy[0, 0], vxy[1, 0]
+        dst_pts.append((sx, sy))
+    return dst_pts

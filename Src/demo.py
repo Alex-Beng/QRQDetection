@@ -1,11 +1,12 @@
 from Cv2Util import *
 from MyUtil import *
+import math
 
 # just fuck the code !!
 if __name__ == "__main__":
-    pic_root_path = "../Pics/Src/"
-    pic_detec_dst_path = "../Pics/Dst/"
-    pic_decod_dst_path = "../Pics/DecDst/"
+    pic_root_path =         "./Pics/Src/"
+    pic_detec_dst_path =    "./Pics/Dst/"
+    pic_decod_dst_path =    "./Pics/DecDst/"
     pics_paths = GetImgPaths(pic_root_path)
     # pics_paths = [pic_root_path+i for i in pics_paths]
     
@@ -211,23 +212,6 @@ if __name__ == "__main__":
             cv2.circle(image, tuple(corner.astype(np.int16)), 3, color[c_idx])
         SHOW_IMAGE(t_draw)
 
-        # 透视变换求
-        # qrc_width = 300
-        # persp_trans = MyGetPerspTrans(all_corners, qrc_width)
-        # # print(persp_trans)
-
-        # loss_corner_uv = np.array([300, 300, 1], dtype=np.float32)
-        # persp_trans = np.matrix(persp_trans)
-        # loss_corner_xy = persp_trans.dot(loss_corner_uv).astype(np.int16)
-        # # print(loss_corner_xy)
-
-        # cv2.circle(image, (loss_corner_xy[0, 0], loss_corner_xy[0, 1]), 10, (255, 128, 128))
-        # SHOW_IMAGE(image)
-
-        # 直接莽平行四边形
-        # loss_corner = all_corners[6]+all_corners[9]-all_corners[0]
-        # loss_corner = loss_corner.astype(np.int16)
-
 
         # 利用交点求
 
@@ -278,31 +262,55 @@ if __name__ == "__main__":
             np.array([qrcode_width, qrcode_width])
         ]
         # 试试二合一
-        dst_image = MyPerspective2in1(binary_image, pts1, pts2, qrcode_width)
+        dst_image, homo_mat = MyPerspective2in1(binary_image, pts1, pts2, qrcode_width)
         print("showing decoded result")
         SHOW_IMAGE(dst_image)
-        if not DEBUGING:
-            cv2.imwrite(pic_decod_dst_path+pic_path, dst_image)
-            print(pic_decod_dst_path+pic_path)
-        
-
-        # 康一下opencv的效果，以及对比
-        # print(pts1, pts2)
-        # pts1 = np.array(pts1, dtype=np.float32).reshape(-1, 2)
-        # pts2 = np.array(pts2, dtype=np.float32).reshape(-1, 2)
-        # cv_persp_trans = cv2.getPerspectiveTransform(pts1, pts2)
-        # print(persp_trans-cv_persp_trans)
-
-        # dst = cv2.warpPerspective(binary_image, cv_persp_trans, (qrcode_width, qrcode_width))
-        # print("showing cv's pers result")
-        # SHOW_IMAGE(dst)
         # if not DEBUGING:
-        #     cv2.imwrite(pic_decod_dst_path+'cv_'+pic_path, dst)
-        #     print(pic_decod_dst_path+'cv_'+pic_path)
+        #     cv2.imwrite(pic_decod_dst_path+pic_path, dst_image)
+        #     print(pic_decod_dst_path+pic_path)
+
+        dst_pts = MyWrapPerspectiveOnPoints(all_corners, homo_mat)
+        # 可视化一下结果
+        # dst_image = cv2.cvtColor(dst_image, cv2.COLOR_GRAY2BGR)
+        # print(dst_pts)
+        # print(pts2)
+        # for pts in dst_pts:
+        #     cv2.circle(dst_image, (int(pts[0]), int(pts[1])), 5, (0,0,255), -1)
+        # SHOW_IMAGE(dst_image)
+
+        # 确定一行bit数量
+        rect_len = math.sqrt(
+            (dst_pts[0][0] - dst_pts[2][0])**2 +
+            (dst_pts[0][1] - dst_pts[2][1])**2
+        )
+        code_len = qrcode_width
+        # print(rect_len, code_len)
+        bits_per_edge = int(7*code_len/rect_len+0.5)
         
+        print("bits per edge:",bits_per_edge)
+        if bits_per_edge%2 == 2:
+            bits_per_edge += 1
+        bit_rect_len = qrcode_width//bits_per_edge
 
-        # dst = cv2.warpPerspective(image, re_persp_trans, (qrcode_width, qrcode_width))
-        # SHOW_IMAGE(dst)
+        # recode part
+        decode_dst = []
+        decode_image = np.zeros(dst_image.shape, dtype=np.uint8)
+        # print(decode_image.shape)
 
-        # dst = cv2.warpPerspective(image, persp_trans.I, (qrcode_width, qrcode_width))
-        # SHOW_IMAGE(dst)
+        for r in range(bits_per_edge):
+            for c in range(bits_per_edge):
+                pivot = (
+                    int(r*bit_rect_len),
+                    int(c*bit_rect_len)
+                )
+                if dst_image[pivot[0]+bit_rect_len//2, pivot[1]+bit_rect_len//2] > 0: # 白色点
+                    decode_dst.append(1)
+                    MyFillRect(decode_image, (pivot[1], pivot[0], bit_rect_len, bit_rect_len), 255)
+                else:
+                    decode_dst.append(0)
+                    MyFillRect(decode_image, (pivot[1], pivot[0], bit_rect_len, bit_rect_len), 0)
+        SHOW_IMAGE(decode_image)
+        code = "".join([str(i) for i in decode_dst])
+        if not DEBUGING:
+            cv2.imwrite(pic_decod_dst_path+pic_path[:-4]+"_%s.jpg"%code[:10], decode_image)
+            print(pic_decod_dst_path+pic_path[:-4]+"_%s.jpg"%code[:10])
