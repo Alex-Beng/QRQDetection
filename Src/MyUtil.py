@@ -7,9 +7,15 @@ from math import *
 from Cv2Util import *
 from Contours import *
 
-# params
+# params 
+# 正向变换/反向变换
 MY_PERSP_TRANS_XY2UV = 0
 MY_PERSP_TRANS_UV2XY = 1
+
+# params
+# 解方程方法
+MY_DEPLOY_LS = 0
+MY_DEPLOY_SVD = 1
 
 @numba.jit
 def GetImgPaths(folder_path):
@@ -235,8 +241,9 @@ def MyLocalCor(x_vec, y_vec, origin, contour):
             y_sub_x_max = y-x
     return corners
 
+# 通过method参数指定方法
 @numba.jit
-def MyGetPerspTrans(all_corners, imagine_width, mode):
+def MyGetPerspTrans(all_corners, imagine_width, mode, method):
     # 四个对应点
     imagine_corners = [
         np.array([0, 0]), 
@@ -250,7 +257,7 @@ def MyGetPerspTrans(all_corners, imagine_width, mode):
         all_corners[9],
         all_corners[12]
     ]
-
+    # print(pixel_corners, imagine_corners)
     # print(corr_corners)
     # print(all_corners)
     # A & B
@@ -285,14 +292,23 @@ def MyGetPerspTrans(all_corners, imagine_width, mode):
         )
     A = np.array(A, dtype=np.float32).reshape(-1, 8)
     B = np.array(B, dtype=np.float32).reshape(-1, 1)
+    print(A.shape, B.shape)
 
     # print(A)
     # print(B)
-    # 计算最小二乘解
-    A_T_I = np.matrix(A.T.dot(A))
-    x = A_T_I.I.dot(A.T).dot(B)
-    yayaya = np.array([1])
-    return np.vstack((x, yayaya)).reshape(3, 3)
+    if method == MY_DEPLOY_LS:
+        # 计算最小二乘解
+        A_T_I = np.matrix(A.T.dot(A))
+        x = A_T_I.I.dot(A.T).dot(B)
+        yayaya = np.array([1])
+        return np.vstack((x, yayaya)).reshape(3, 3)
+    elif method == MY_DEPLOY_SVD:
+        # x = np.linalg.solve(A, B)
+        _, x = cv2.solve(A, B, cv2.DECOMP_SVD)
+        # print(x)
+        yayaya = np.array([1])
+        return np.vstack((x, yayaya)).reshape(3, 3)
+        # return np.linalg.solve(A, B).reshape(3, 3)
 
 # def MyGetLostCorner(refer_corners, out_three_corners):
 #     delta = []
@@ -378,7 +394,7 @@ def MyFillRect(image, rect, color):
         for c in range(rect[3]):
             image[rect[0]+r, rect[1]+c] = color
 
-# 解码与重构二维码
+# 解码与重构二维码，abandoned
 @numba.jit
 def MyDecodeRecon(bin_image, recon_image, xy2uv_h, bit_per_width, bit_rect_width, image):
     half_rect_width = bit_rect_width//2
@@ -403,3 +419,26 @@ def MyDecodeRecon(bin_image, recon_image, xy2uv_h, bit_per_width, bit_rect_width
             # recon_image[uv_homo_cor[0, 0], uv_homo_cor[0, 1]] = 255
         SHOW_IMAGE(image)
         SHOW_IMAGE(recon_image)
+# 双线性插值, ins_x, ins_y为要插入的点
+def MyBilinearInter(src_image:np.ndarray, ins_x:float, ins_y:float)->float:
+    x1, x2 = int(ins_x), int(ins_x)+1
+    y1, y2 = int(ins_y), int(ins_y)+1
+    H1 = np.dot(np.array([x2 - ins_x, ins_x - x1]), src_image[y1: y2 + 1, x1:x2 + 1])
+    return H1[0]*(y2 - ins_y) + H1[1]*(ins_y - y1)
+
+
+@numba.jit
+def MyWarpPerspective(src_image:np.ndarray, homo_matrix:np.ndarray, dst_size)->np.ndarray:
+    dst_image = np.zeros(dst_size, dtype=np.float32)
+    rows = dst_image.shape[0]
+    cols = dst_image.shape[1]
+    for r in range(rows):
+        for c in range(cols):
+            xy_homo_cor = np.array([c, r, 1], dtype=np.float32).reshape(-1, 1)
+            # 注意不能直接用算出来的uv，因为还有齐次项1/Z
+            uv_homo_cor = homo_matrix.dot(xy_homo_cor)
+            W = 0.0
+            if uv_homo_cor[2, 0] != 0:
+                W = 1 / uv_homo_cor[2, 0]
+            dst_image[r, c] = MyBilinearInter(src_image, uv_homo_cor[0, 0]/W, uv_homo_cor[1, 0]/W)
+    return dst_image

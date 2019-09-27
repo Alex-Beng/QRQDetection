@@ -3,8 +3,9 @@ from MyUtil import *
 
 # just fuck the code !!
 if __name__ == "__main__":
-    pic_root_path = "../Pics/"
-    pic_dst_path = "../Pics/Dst/"
+    pic_root_path = "../Pics/Src/"
+    pic_detec_dst_path = "../Pics/Dst/"
+    pic_decod_dst_path = "../Pics/DecDst/"
     pics_paths = GetImgPaths(pic_root_path)
     # pics_paths = [pic_root_path+i for i in pics_paths]
     
@@ -253,47 +254,52 @@ if __name__ == "__main__":
         cv2.line(image, (all_corners[0][0], all_corners[0][1]), (all_corners[6][0], all_corners[6][1]), (0, 0, 255), 1)
         SHOW_IMAGE(image)
         if not DEBUGING:
-            cv2.imwrite(pic_dst_path+pic_path, image)
+            cv2.imwrite(pic_detec_dst_path+pic_path, image)
 
         # 2 decode part
 
         # 2.1 获得透视变换矩阵
         qrcode_width = 600
-        persp_trans = MyGetPerspTrans(all_corners, qrcode_width, MY_PERSP_TRANS_XY2UV)
-        re_persp_trans = MyGetPerspTrans(all_corners, qrcode_width, MY_PERSP_TRANS_UV2XY)
+        persp_trans = MyGetPerspTrans(all_corners, qrcode_width, MY_PERSP_TRANS_XY2UV, MY_DEPLOY_SVD)
+        re_persp_trans = MyGetPerspTrans(all_corners, qrcode_width, MY_PERSP_TRANS_UV2XY, MY_DEPLOY_SVD)
 
         # print(persp_trans)
-
-        # 2.2 通过H矩阵获得Scale
-        # MyGetQrScale(all_corners, persp_trans)
-        # bit_per_width = MyGetQrScale(all_corners, re_persp_trans)
-        # bit_rect_width = qrcode_width//bit_per_width
-        # recon_qrcode_image = np.zeros((qrcode_width, qrcode_width, 3), dtype=np.uint8)
-
-        # print(bit_per_width, bit_rect_width)
-        # t_draw = copy.deepcopy(image)
-        # MyDecodeRecon(binary_image, recon_qrcode_image, persp_trans, bit_per_width, bit_rect_width, t_draw)
-
-
+        
+        # 使用双线性插值获得解码图
+        dst_image = MyWarpPerspective(binary_image, persp_trans, (qrcode_width, qrcode_width))
+        # dst_image = cv2.warpPerspective(binary_image, re_persp_trans, (qrcode_width, qrcode_width))
+        print("showing decoded result")
+        SHOW_IMAGE(dst_image.astype(np.uint8))
+        if not DEBUGING:
+            cv2.imwrite(pic_decod_dst_path+pic_path, dst_image)
+            print(pic_decod_dst_path+pic_path)
         
         # 康一下opencv的效果，以及对比
-        # pts1 = [
-        #     all_corners[0],
-        #     all_corners[6],
-        #     all_corners[9],
-        #     all_corners[12]
-        # ]
-        # pts1 = np.array(pts1, dtype=np.float32).reshape(-1, 2)
-        # pts2 = [
-        #     np.array([0, 0]), 
-        #     np.array([0, qrcode_width]), 
-        #     np.array([qrcode_width, 0]), 
-        #     np.array([qrcode_width, qrcode_width])
-        # ]
-        # pts2 = np.array(pts2, dtype=np.float32).reshape(-1, 2)
-        # cv_persp_trans = cv2.getPerspectiveTransform(pts1, pts2)
-        # dst = cv2.warpPerspective(image, cv_persp_trans, (qrcode_width, qrcode_width))
-        # SHOW_IMAGE(dst)
+        pts1 = [
+            all_corners[0],
+            all_corners[6],
+            all_corners[9],
+            all_corners[12]
+        ]
+        pts1 = np.array(pts1, dtype=np.float32).reshape(-1, 2)
+        pts2 = [
+            np.array([0, 0]), 
+            np.array([0, qrcode_width]), 
+            np.array([qrcode_width, 0]), 
+            np.array([qrcode_width, qrcode_width])
+        ]
+        # print(pts1, pts2)
+        pts2 = np.array(pts2, dtype=np.float32).reshape(-1, 2)
+        cv_persp_trans = cv2.getPerspectiveTransform(pts1, pts2)
+        print(persp_trans-cv_persp_trans)
+
+        dst = cv2.warpPerspective(binary_image, cv_persp_trans, (qrcode_width, qrcode_width))
+        print("showing cv's pers result")
+        SHOW_IMAGE(dst)
+        if not DEBUGING:
+            cv2.imwrite(pic_decod_dst_path+'cv_'+pic_path, dst)
+            print(pic_decod_dst_path+'cv_'+pic_path)
+        
 
         # dst = cv2.warpPerspective(image, re_persp_trans, (qrcode_width, qrcode_width))
         # SHOW_IMAGE(dst)
